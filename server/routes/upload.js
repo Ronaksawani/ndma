@@ -49,7 +49,7 @@ router.post("/single", auth, upload.single("file"), async (req, res) => {
         (error, result) => {
           if (error) reject(error);
           else resolve(result);
-        }
+        },
       );
 
       uploadStream.end(req.file.buffer);
@@ -108,11 +108,11 @@ router.post("/multiple", auth, upload.array("files", 10), async (req, res) => {
             (error, result) => {
               if (error) reject(error);
               else resolve(result);
-            }
+            },
           );
 
           uploadStream.end(file.buffer);
-        })
+        }),
     );
 
     const results = await Promise.all(uploadPromises);
@@ -134,6 +134,84 @@ router.post("/multiple", auth, upload.array("files", 10), async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Upload failed",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * Delete file from Cloudinary
+ * DELETE /api/upload/delete
+ */
+router.delete("/delete", auth, async (req, res) => {
+  try {
+    const { publicId, resourceType = "image" } = req.body;
+
+    if (!publicId) {
+      return res.status(400).json({ message: "Public ID is required" });
+    }
+
+    // Delete from Cloudinary
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+    });
+
+    if (result.result === "ok" || result.result === "not found") {
+      res.json({
+        success: true,
+        message: "File deleted successfully",
+        data: result,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Failed to delete file",
+        data: result,
+      });
+    }
+  } catch (error) {
+    console.error("Delete error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Delete failed",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * Delete multiple files from Cloudinary
+ * DELETE /api/upload/delete-multiple
+ */
+router.delete("/delete-multiple", auth, async (req, res) => {
+  try {
+    const { publicIds, resourceType = "image" } = req.body;
+
+    if (!publicIds || !Array.isArray(publicIds) || publicIds.length === 0) {
+      return res.status(400).json({ message: "Public IDs array is required" });
+    }
+
+    // Delete all files from Cloudinary
+    const deletePromises = publicIds.map((publicId) =>
+      cloudinary.uploader.destroy(publicId, { resource_type: resourceType }),
+    );
+
+    const results = await Promise.all(deletePromises);
+
+    const successCount = results.filter(
+      (r) => r.result === "ok" || r.result === "not found",
+    ).length;
+
+    res.json({
+      success: true,
+      message: `${successCount}/${publicIds.length} file(s) deleted successfully`,
+      data: results,
+    });
+  } catch (error) {
+    console.error("Multiple delete error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Delete failed",
       error: error.message,
     });
   }

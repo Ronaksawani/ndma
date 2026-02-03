@@ -21,6 +21,7 @@ import AddTraining from "./pages/AddTraining";
 import EditTraining from "./pages/EditTraining";
 import ViewTraining from "./pages/ViewTraining";
 import MyTrainings from "./pages/MyTrainings";
+import PartnerReports from "./pages/PartnerReports";
 import Profile from "./pages/Profile";
 
 // Protected Route Component
@@ -95,6 +96,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="partner">
             <MyTrainings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/partner/reports"
+        element={
+          <ProtectedRoute role="partner">
+            <PartnerReports />
           </ProtectedRoute>
         }
       />

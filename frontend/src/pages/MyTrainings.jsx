@@ -55,7 +55,7 @@ export default function MyTrainings() {
         training.location?.city
           ?.toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        training.theme?.toLowerCase().includes(searchTerm.toLowerCase())
+        training.theme?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredTrainings(filtered);
     setCurrentPage(1);
@@ -89,7 +89,7 @@ export default function MyTrainings() {
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedTrainings = filteredTrainings.slice(
     startIdx,
-    startIdx + ITEMS_PER_PAGE
+    startIdx + ITEMS_PER_PAGE,
   );
 
   const handleEdit = (id) => {
@@ -149,8 +149,7 @@ export default function MyTrainings() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
                     width: "100%",
-                    paddingLeft: "36px",
-                    padding: "10px 12px",
+                    padding: "10px 12px 10px 36px",
                     border: "1px solid #ddd",
                     borderRadius: "6px",
                     fontSize: "14px",
@@ -274,7 +273,7 @@ export default function MyTrainings() {
                           <td style={{ padding: "12px" }}>
                             {training.startDate
                               ? new Date(
-                                  training.startDate
+                                  training.startDate,
                                 ).toLocaleDateString()
                               : "-"}
                           </td>
@@ -360,7 +359,7 @@ export default function MyTrainings() {
                     Showing {startIdx + 1} to{" "}
                     {Math.min(
                       startIdx + ITEMS_PER_PAGE,
-                      filteredTrainings.length
+                      filteredTrainings.length,
                     )}{" "}
                     of {filteredTrainings.length} trainings
                   </span>
@@ -407,7 +406,7 @@ export default function MyTrainings() {
                         >
                           {page}
                         </button>
-                      )
+                      ),
                     )}
                     <button
                       onClick={() =>

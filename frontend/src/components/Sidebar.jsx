@@ -36,6 +36,7 @@ export default function Sidebar({ role }) {
     { icon: "📊", label: "Dashboard", href: "/partner/dashboard" },
     { icon: "➕", label: "Add Training", href: "/partner/add-training" },
     { icon: "📋", label: "My Trainings", href: "/partner/my-trainings" },
+    { icon: "📈", label: "Reports", href: "/partner/reports" },
     { icon: "👤", label: "Profile", href: "/partner/profile" },
   ];
 

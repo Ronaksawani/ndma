@@ -11,7 +11,7 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Sidebar from "../components/Sidebar";
-import { trainingAPI } from "../utils/api";
+import { trainingAPI, uploadAPI } from "../utils/api";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/Form.module.css";
 
@@ -90,9 +90,29 @@ export default function EditTraining() {
   });
   const [photos, setPhotos] = useState([]);
   const [csvFile, setCsvFile] = useState(null);
+  const [deletedPhotos, setDeletedPhotos] = useState([]); // Track deleted photos for Cloudinary cleanup
+  const [deletedCsvFile, setDeletedCsvFile] = useState(null); // Track deleted CSV for Cloudinary cleanup
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [error, setError] = useState("");
+  const [currentParticipant, setCurrentParticipant] = useState({
+    fullName: "",
+    aadhaarNumber: "",
+    email: "",
+    phone: "",
+  });
+  const [addedParticipants, setAddedParticipants] = useState([]);
+  const [editingIndex, setEditingIndex] = useState(null);
+
+  const isAadhaarValid = (value) => /^\d{12}$/.test(value);
+  const isEmailValid = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const isPhoneValid = (value) => /^\d{10}$/.test(value);
+  const isParticipantComplete = (participant) =>
+    participant.fullName.trim().length > 0 &&
+    isEmailValid(participant.email.trim()) &&
+    isPhoneValid(participant.phone.trim()) &&
+    isAadhaarValid(participant.aadhaarNumber.trim());
 
   useEffect(() => {
     fetchTrainingData();
@@ -118,6 +138,33 @@ export default function EditTraining() {
         trainerEmail: training.trainerEmail || "",
         participantsCount: training.participantsCount || "",
       });
+
+      // Load existing participants
+      if (training.participants && training.participants.length > 0) {
+        setAddedParticipants(training.participants);
+      }
+
+      // Load existing photos
+      if (training.photos && training.photos.length > 0) {
+        // Convert existing photos to File-like objects for display
+        const existingPhotos = training.photos.map((photo, index) => ({
+          name: photo.filename || `Photo ${index + 1}`,
+          url: photo.url,
+          isExisting: true,
+        }));
+        setPhotos(existingPhotos);
+      }
+
+      // Load existing attendance sheet
+      if (training.attendanceSheet && training.attendanceSheet.filename) {
+        // Create a File-like object for the CSV
+        const csvFileObj = {
+          name: training.attendanceSheet.filename,
+          url: training.attendanceSheet.url,
+          isExisting: true,
+        };
+        setCsvFile(csvFileObj);
+      }
 
       setError("");
     } catch (err) {
@@ -146,33 +193,218 @@ export default function EditTraining() {
   };
 
   const removePhoto = (index) => {
+    const photoToRemove = photos[index];
+    // Track existing photos for Cloudinary deletion
+    if (photoToRemove.isExisting && photoToRemove.url) {
+      // Extract publicId from Cloudinary URL
+      const urlParts = photoToRemove.url.split("/");
+      const publicIdWithExt = urlParts.slice(-2).join("/"); // folder/filename.ext
+      const publicId = publicIdWithExt.split(".")[0]; // Remove extension
+      setDeletedPhotos((prev) => [
+        ...prev,
+        { publicId, url: photoToRemove.url },
+      ]);
+    }
     setPhotos(photos.filter((_, i) => i !== index));
+  };
+
+  const removeCSVFile = () => {
+    // Track existing CSV for Cloudinary deletion
+    if (csvFile && csvFile.isExisting && csvFile.url) {
+      const urlParts = csvFile.url.split("/");
+      const publicIdWithExt = urlParts.slice(-2).join("/"); // folder/filename.ext
+      const publicId = publicIdWithExt.split(".")[0]; // Remove extension
+      setDeletedCsvFile({ publicId, url: csvFile.url });
+    }
+    setCsvFile(null);
+  };
+
+  const handleParticipantChange = (field, value) => {
+    let nextValue = value;
+    if (field === "aadhaarNumber") {
+      nextValue = value.replace(/\D/g, "").slice(0, 12);
+    } else if (field === "phone") {
+      nextValue = value.replace(/\D/g, "").slice(0, 10);
+    }
+    setCurrentParticipant((prev) => ({
+      ...prev,
+      [field]: nextValue,
+    }));
+  };
+
+  const addParticipant = () => {
+    if (!isParticipantComplete(currentParticipant)) {
+      setError(
+        "Please fill all fields: valid name, 12-digit Aadhaar, valid email, and 10-digit phone.",
+      );
+      return;
+    }
+    setError("");
+    if (editingIndex !== null) {
+      // Update existing participant
+      const updated = [...addedParticipants];
+      updated[editingIndex] = currentParticipant;
+      setAddedParticipants(updated);
+      setEditingIndex(null);
+    } else {
+      // Add new participant
+      setAddedParticipants((prev) => [...prev, currentParticipant]);
+    }
+    setCurrentParticipant({
+      fullName: "",
+      aadhaarNumber: "",
+      email: "",
+      phone: "",
+    });
+  };
+
+  const editParticipant = (index) => {
+    setCurrentParticipant(addedParticipants[index]);
+    setEditingIndex(index);
+  };
+
+  const deleteParticipant = (index) => {
+    setAddedParticipants((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+    setCurrentParticipant({
+      fullName: "",
+      aadhaarNumber: "",
+      email: "",
+      phone: "",
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (addedParticipants.length === 0) {
+      setError("Please add at least one participant.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const formPayload = new FormData();
-      Object.keys(formData).forEach((key) => {
-        formPayload.append(key, formData[key]);
-      });
-      photos.forEach((photo) => {
-        formPayload.append(`photos`, photo);
-      });
-      if (csvFile) formPayload.append("attendanceSheet", csvFile);
+      // Delete removed files from Cloudinary first
+      const filesToDelete = [];
 
-      await trainingAPI.update(id, formPayload);
+      // Add deleted photos
+      if (deletedPhotos.length > 0) {
+        filesToDelete.push(...deletedPhotos.map((p) => p.publicId));
+      }
+
+      // Add deleted CSV
+      if (deletedCsvFile) {
+        filesToDelete.push(deletedCsvFile.publicId);
+      }
+
+      // Delete files from Cloudinary
+      if (filesToDelete.length > 0) {
+        try {
+          await uploadAPI.deleteMultiple(filesToDelete, "auto");
+          console.log(
+            `Deleted ${filesToDelete.length} file(s) from Cloudinary`,
+          );
+        } catch (deleteError) {
+          console.error("Error deleting files from Cloudinary:", deleteError);
+          // Continue with update even if deletion fails
+        }
+      }
+
+      // Separate existing and new photos
+      const existingPhotos = photos.filter((photo) => photo.isExisting);
+      const newPhotos = photos.filter((photo) => !photo.isExisting);
+
+      // Upload new photos if any
+      let newPhotoUrls = [];
+      if (newPhotos.length > 0) {
+        setUploadingFiles(true);
+        const uploadResponse = await uploadAPI.uploadMultiple(
+          newPhotos,
+          "training-photos",
+        );
+        setUploadingFiles(false);
+
+        if (!uploadResponse.data.success) {
+          throw new Error(uploadResponse.data.error || "Photo upload failed");
+        }
+
+        newPhotoUrls = uploadResponse.data.data.map((file) => ({
+          url: file.url,
+          publicId: file.publicId,
+          filename: file.filename,
+        }));
+      }
+
+      // Combine existing and new photos
+      const allPhotos = [
+        ...existingPhotos.map((photo) => ({
+          url: photo.url,
+          filename: photo.name,
+        })),
+        ...newPhotoUrls,
+      ];
+
+      // Handle CSV file
+      let attendanceSheetData = null;
+      if (csvFile) {
+        if (csvFile.isExisting) {
+          // Keep existing CSV file
+          attendanceSheetData = {
+            url: csvFile.url,
+            filename: csvFile.name,
+          };
+        } else {
+          // Upload new CSV file
+          setUploadingFiles(true);
+          const csvUploadResponse = await uploadAPI.uploadSingle(
+            csvFile,
+            "training-attendance",
+          );
+          setUploadingFiles(false);
+
+          if (!csvUploadResponse.data.success) {
+            throw new Error(
+              csvUploadResponse.data.error || "CSV upload failed",
+            );
+          }
+
+          attendanceSheetData = {
+            url: csvUploadResponse.data.data.url,
+            publicId: csvUploadResponse.data.data.publicId,
+            filename: csvUploadResponse.data.data.filename,
+          };
+        }
+      }
+
+      const cleanedParticipants = addedParticipants.map((participant) => ({
+        fullName: participant.fullName.trim(),
+        aadhaarNumber: participant.aadhaarNumber.trim(),
+        email: participant.email.trim(),
+        phone: participant.phone.trim(),
+      }));
+
+      const payload = {
+        ...formData,
+        participants: cleanedParticipants,
+        photos: allPhotos,
+        attendanceSheet: attendanceSheetData,
+      };
+
+      await trainingAPI.update(id, payload);
       alert("Training event updated successfully!");
       navigate("/partner/my-trainings");
     } catch (err) {
       setError(
-        err.response?.data?.message || "Failed to update training event"
+        err.response?.data?.message || "Failed to update training event",
       );
     } finally {
       setSubmitting(false);
+      setUploadingFiles(false);
     }
   };
 
@@ -230,13 +462,15 @@ export default function EditTraining() {
                         required
                       >
                         <option value="">Select Theme</option>
-                        <option value="flood">Flood Rescue</option>
-                        <option value="earthquake">
+                        <option value="Flood Management">Flood Rescue</option>
+                        <option value="Earthquake Safety">
                           Earthquake Preparedness
                         </option>
-                        <option value="cyclone">Cyclone Management</option>
-                        <option value="first-aid">First Aid</option>
-                        <option value="fire">Fire Safety</option>
+                        <option value="Cyclone Management">
+                          Cyclone Management
+                        </option>
+                        <option value="First Aid">First Aid</option>
+                        <option value="Fire Safety">Fire Safety</option>
                       </select>
                     </div>
                   </div>
@@ -468,14 +702,16 @@ export default function EditTraining() {
                           document.getElementById("photo-input").click()
                         }
                       >
+                        <div className={styles["upload-area-content"]}>
+                          <div className={styles["upload-area-title"]}>
+                            Event Photos/Videos
+                          </div>
+                          <div className={styles["upload-area-subtitle"]}>
+                            Drag and drop or click to upload
+                          </div>
+                        </div>
                         <div className={styles["upload-area-icon"]}>
                           <CiCamera size={40} />
-                        </div>
-                        <div className={styles["upload-area-title"]}>
-                          Event Photos/Videos
-                        </div>
-                        <div className={styles["upload-area-subtitle"]}>
-                          Drag and drop or click to upload
                         </div>
                         <input
                           id="photo-input"
@@ -492,6 +728,16 @@ export default function EditTraining() {
                             <div key={idx} className={styles["file-item"]}>
                               <span className={styles["file-item-name"]}>
                                 {photo.name}
+                                {photo.isExisting && (
+                                  <small
+                                    style={{
+                                      color: "#10b981",
+                                      marginLeft: "8px",
+                                    }}
+                                  >
+                                    (Existing)
+                                  </small>
+                                )}
                               </span>
                               <button
                                 type="button"
@@ -516,14 +762,16 @@ export default function EditTraining() {
                           document.getElementById("csv-input").click()
                         }
                       >
+                        <div className={styles["upload-area-content"]}>
+                          <div className={styles["upload-area-title"]}>
+                            Participant List (CSV/Excel)
+                          </div>
+                          <div className={styles["upload-area-subtitle"]}>
+                            Drag and drop or click to upload
+                          </div>
+                        </div>
                         <div className={styles["upload-area-icon"]}>
                           <CiFileOn size={40} />
-                        </div>
-                        <div className={styles["upload-area-title"]}>
-                          Participant List (CSV/Excel)
-                        </div>
-                        <div className={styles["upload-area-subtitle"]}>
-                          Drag and drop or click to upload
                         </div>
                         <input
                           id="csv-input"
@@ -535,17 +783,183 @@ export default function EditTraining() {
                       </div>
                       {csvFile && (
                         <div
-                          style={{
-                            marginTop: "15px",
-                            fontSize: "13px",
-                            color: "#059669",
-                          }}
+                          className={styles["uploaded-files"]}
+                          style={{ marginTop: "15px" }}
                         >
-                          ✓ {csvFile.name}
+                          <div className={styles["file-item"]}>
+                            <span className={styles["file-item-name"]}>
+                              {csvFile.name}
+                              {csvFile.isExisting && (
+                                <small
+                                  style={{
+                                    color: "#10b981",
+                                    marginLeft: "8px",
+                                  }}
+                                >
+                                  (Existing)
+                                </small>
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              className={styles["file-item-remove"]}
+                              onClick={removeCSVFile}
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
+                </div>
+
+                {/* Trainee/Participant Details */}
+                <div className={styles["form-section"]}>
+                  <h3 className={styles["form-section-title"]}>
+                    Trainee/Participant Details
+                  </h3>
+                  <p className={styles["section-subtitle"]}>
+                    Add participant details one by one and view them in the
+                    table below.
+                  </p>
+
+                  {/* Participant Input Form */}
+                  <div className={styles["participant-card"]}>
+                    <div className={styles["participant-grid"]}>
+                      <div className={styles["form-group"]}>
+                        <label>Full Name</label>
+                        <input
+                          type="text"
+                          value={currentParticipant.fullName}
+                          onChange={(e) =>
+                            handleParticipantChange("fullName", e.target.value)
+                          }
+                          placeholder="Full name"
+                        />
+                      </div>
+                      <div className={styles["form-group"]}>
+                        <label>Aadhaar ID</label>
+                        <input
+                          type="text"
+                          value={currentParticipant.aadhaarNumber}
+                          onChange={(e) =>
+                            handleParticipantChange(
+                              "aadhaarNumber",
+                              e.target.value,
+                            )
+                          }
+                          placeholder="12-digit Aadhaar"
+                          inputMode="numeric"
+                          maxLength="12"
+                        />
+                      </div>
+                      <div className={styles["form-group"]}>
+                        <label>Email</label>
+                        <input
+                          type="email"
+                          value={currentParticipant.email}
+                          onChange={(e) =>
+                            handleParticipantChange("email", e.target.value)
+                          }
+                          placeholder="email@example.com"
+                        />
+                      </div>
+                      <div className={styles["form-group"]}>
+                        <label>Phone</label>
+                        <input
+                          type="tel"
+                          value={currentParticipant.phone}
+                          onChange={(e) =>
+                            handleParticipantChange("phone", e.target.value)
+                          }
+                          placeholder="10-digit number"
+                          maxLength="10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className={styles["participant-actions"]}>
+                      <button
+                        type="button"
+                        className={styles["add-participant-btn"]}
+                        onClick={addParticipant}
+                      >
+                        {editingIndex !== null
+                          ? "Update Participant"
+                          : "Add Participant"}
+                      </button>
+                      {editingIndex !== null && (
+                        <button
+                          type="button"
+                          className={styles["cancel-edit-btn"]}
+                          onClick={cancelEdit}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Participants Table */}
+                  {addedParticipants.length > 0 && (
+                    <div className={styles["participants-table-container"]}>
+                      <h4
+                        style={{
+                          marginBottom: "15px",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        Added Participants ({addedParticipants.length})
+                      </h4>
+                      <div className={styles["table-wrapper"]}>
+                        <table className={styles["participants-table"]}>
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Full Name</th>
+                              <th>Aadhaar ID</th>
+                              <th>Email</th>
+                              <th>Phone</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {addedParticipants.map((participant, index) => (
+                              <tr key={index}>
+                                <td>{index + 1}</td>
+                                <td>{participant.fullName}</td>
+                                <td>{participant.aadhaarNumber}</td>
+                                <td>{participant.email}</td>
+                                <td>{participant.phone}</td>
+                                <td>
+                                  <div className={styles["action-buttons"]}>
+                                    <button
+                                      type="button"
+                                      className={styles["edit-btn"]}
+                                      onClick={() => editParticipant(index)}
+                                      title="Edit participant"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles["delete-btn"]}
+                                      onClick={() => deleteParticipant(index)}
+                                      title="Remove participant"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Form Actions */}
@@ -564,9 +978,17 @@ export default function EditTraining() {
                     className={
                       styles["form-btn"] + " " + styles["form-btn-submit"]
                     }
-                    disabled={submitting}
+                    disabled={
+                      submitting ||
+                      uploadingFiles ||
+                      addedParticipants.length === 0
+                    }
                   >
-                    {submitting ? "Updating..." : "Update Training"}
+                    {uploadingFiles
+                      ? "Uploading files..."
+                      : submitting
+                        ? "Updating..."
+                        : "Update Training"}
                   </button>
                 </div>
               </form>

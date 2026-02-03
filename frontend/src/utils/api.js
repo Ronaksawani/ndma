@@ -64,6 +64,18 @@ export const uploadAPI = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+
+  delete: (publicId, resourceType = "image") => {
+    return api.delete("/upload/delete", {
+      data: { publicId, resourceType },
+    });
+  },
+
+  deleteMultiple: (publicIds, resourceType = "image") => {
+    return api.delete("/upload/delete-multiple", {
+      data: { publicIds, resourceType },
+    });
+  },
 };
 
 export const analyticsAPI = {

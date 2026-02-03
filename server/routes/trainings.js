@@ -13,7 +13,7 @@ const optionalAuth = (req, res, next) => {
       const decoded = jwt.verify(
         token,
         process.env.JWT_SECRET ||
-          "your_jwt_secret_key_change_this_in_production"
+          "your_jwt_secret_key_change_this_in_production",
       );
       req.user = decoded;
     } catch (error) {
@@ -75,12 +75,23 @@ router.get("/:id", async (req, res) => {
   try {
     const training = await TrainingEvent.findById(req.params.id).populate(
       "partnerId",
-      "organizationName contactPerson phone"
+      "organizationName contactPerson phone",
     );
     if (!training) {
       return res.status(404).json({ message: "Training not found" });
     }
-    res.json(training);
+
+    // Fetch participants for this training
+    const db = require("mongoose").connection;
+    const participants = await db
+      .collection("participants")
+      .find({ trainingId: training._id })
+      .toArray();
+
+    res.json({
+      ...training.toObject(),
+      participants: participants || [],
+    });
   } catch (error) {
     res
       .status(500)
@@ -137,7 +148,8 @@ router.post("/", auth, async (req, res) => {
     // Parse and add photos if provided
     if (photos) {
       try {
-        const photoArray = typeof photos === "string" ? JSON.parse(photos) : photos;
+        const photoArray =
+          typeof photos === "string" ? JSON.parse(photos) : photos;
         training.photos = photoArray.map((photo) => ({
           url: photo.url,
           filename: photo.filename || photo.publicId || "photo",
@@ -169,13 +181,15 @@ router.post("/", auth, async (req, res) => {
     if (participants) {
       try {
         const participantsArray =
-          typeof participants === "string" ? JSON.parse(participants) : participants;
+          typeof participants === "string"
+            ? JSON.parse(participants)
+            : participants;
         const db = require("mongoose").connection;
         const Partner = require("../models/Partner");
         const partnerDoc = await Partner.findOne({ userId: req.user.userId });
         const organizationName =
           partnerDoc?.organizationName || "Training Organization";
-        
+
         // Add training info to each participant and save to participants collection
         const participantDocs = participantsArray.map((participant) => ({
           ...participant,
@@ -190,11 +204,11 @@ router.post("/", auth, async (req, res) => {
         }));
 
         console.log("Saving participants:", participantDocs);
-        
+
         if (participantDocs.length > 0) {
           await db.collection("participants").insertMany(participantDocs);
           console.log(
-            `Successfully saved ${participantDocs.length} participants`
+            `Successfully saved ${participantDocs.length} participants`,
           );
         }
       } catch (e) {
@@ -246,6 +260,9 @@ router.put("/:id", auth, async (req, res) => {
       trainerName,
       trainerEmail,
       participantsCount,
+      participants,
+      photos,
+      attendanceSheet,
     } = req.body;
 
     // Only update allowed fields (not status)
@@ -271,11 +288,101 @@ router.put("/:id", auth, async (req, res) => {
       };
     }
 
+    // Update photos if provided
+    if (photos !== undefined) {
+      try {
+        const photoArray =
+          typeof photos === "string" ? JSON.parse(photos) : photos;
+        training.photos = photoArray.map((photo) => ({
+          url: photo.url,
+          filename: photo.filename || photo.publicId || "photo",
+        }));
+      } catch (e) {
+        console.log("Photos parsing error:", e.message);
+      }
+    }
+
+    // Update attendance sheet if provided
+    if (attendanceSheet !== undefined) {
+      try {
+        if (attendanceSheet === null) {
+          training.attendanceSheet = null;
+        } else {
+          const sheetData =
+            typeof attendanceSheet === "string"
+              ? JSON.parse(attendanceSheet)
+              : attendanceSheet;
+          training.attendanceSheet = {
+            url: sheetData.url,
+            filename: sheetData.filename || "attendance",
+          };
+        }
+      } catch (e) {
+        console.log("Attendance sheet parsing error:", e.message);
+      }
+    }
+
     await training.save();
+
+    // Handle participants update if provided
+    if (participants) {
+      try {
+        const participantsArray =
+          typeof participants === "string"
+            ? JSON.parse(participants)
+            : participants;
+        const db = require("mongoose").connection;
+        const Partner = require("../models/Partner");
+        const partnerDoc = await Partner.findOne({ userId: req.user.userId });
+        const organizationName =
+          partnerDoc?.organizationName || "Training Organization";
+
+        // Delete old participants for this training
+        await db
+          .collection("participants")
+          .deleteMany({ trainingId: training._id });
+
+        // Add updated participants
+        const participantDocs = participantsArray.map((participant) => ({
+          ...participant,
+          trainingId: training._id,
+          trainingTitle: title || training.title,
+          trainingTheme: theme || training.theme,
+          trainingDates: {
+            start: startDate || training.startDate,
+            end: endDate || training.endDate,
+          },
+          organization: organizationName,
+          certificateIssued: true,
+          certificateIssuedAt: new Date(),
+          createdAt: new Date(),
+        }));
+
+        if (participantDocs.length > 0) {
+          await db.collection("participants").insertMany(participantDocs);
+          console.log(
+            `Successfully updated ${participantDocs.length} participants`,
+          );
+        }
+      } catch (e) {
+        console.log("Participants update error:", e.message);
+        // Don't fail the training update if participants update fails
+      }
+    }
+
+    // Fetch updated participants and return
+    const db = require("mongoose").connection;
+    const updatedParticipants = await db
+      .collection("participants")
+      .find({ trainingId: training._id })
+      .toArray();
 
     res.json({
       message: "Training updated successfully",
-      training,
+      training: {
+        ...training.toObject(),
+        participants: updatedParticipants || [],
+      },
     });
   } catch (error) {
     res
@@ -304,7 +411,7 @@ router.patch("/:id/status", auth, async (req, res) => {
     const training = await TrainingEvent.findByIdAndUpdate(
       req.params.id,
       update,
-      { new: true }
+      { new: true },
     );
 
     if (!training) {

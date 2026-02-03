@@ -198,8 +198,10 @@
 .upload-area {
   border: 2px dashed var(--border-color);
   border-radius: 6px;
-  padding: 40px 20px;
-  text-align: center;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
   cursor: pointer;
   transition: all 0.3s;
 }
@@ -212,7 +214,14 @@
 
 .upload-area-icon {
   font-size: 40px;
-  margin-bottom: 15px;
+  flex-shrink: 0;
+  order: -1;
+  color: #6b7280;
+}
+
+.upload-area-content {
+  flex: 1;
+  text-align: left;
 }
 
 .upload-area-title {
@@ -346,5 +355,127 @@
 
   .form-btn {
     width: 100%;
+  }
+}
+
+/* ====== PARTICIPANTS TABLE ====== */
+.participants-table-container {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.participants-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.participants-table thead {
+  background-color: #f3f4f6;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.participants-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.participants-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s;
+}
+
+.participants-table tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+.participants-table td {
+  padding: 12px;
+  color: #374151;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-btn {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #2563eb;
+}
+
+.delete-btn {
+  background-color: #ef4444;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #dc2626;
+}
+
+.cancel-edit-btn {
+  background-color: #6b7280;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 10px;
+}
+
+.cancel-edit-btn:hover {
+  background-color: #4b5563;
+}
+
+@media (max-width: 768px) {
+  .participants-table {
+    font-size: 12px;
+  }
+
+  .participants-table th,
+  .participants-table td {
+    padding: 8px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .edit-btn,
+  .delete-btn {
+    width: 100%;
+  }
+
+  .participants-table-container {
+    margin-top: 20px;
+    padding: 15px;
   }
 }
