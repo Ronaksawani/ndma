@@ -99,6 +99,86 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Create training (admin only)
+router.post("/admin/create", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Only admins can create trainings via this endpoint" });
+    }
+
+    const {
+      title,
+      theme,
+      description,
+      startDate,
+      endDate,
+      state,
+      district,
+      city,
+      latitude,
+      longitude,
+      trainerName,
+      trainerEmail,
+      participantsCount,
+      government = 0,
+      ngo = 0,
+      volunteers = 0,
+      partnerId,
+    } = req.body;
+
+    // Validate required fields
+    if (!title || !theme || !startDate || !endDate || !state || !city) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    if (!partnerId) {
+      return res.status(400).json({ message: "Partner ID is required" });
+    }
+
+    const training = new TrainingEvent({
+      title,
+      theme,
+      description,
+      startDate,
+      endDate,
+      location: {
+        state,
+        district,
+        city,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
+        address: `${city}, ${state}`,
+      },
+      trainerName,
+      trainerEmail,
+      participantsCount: parseInt(participantsCount) || 0,
+      participantBreakdown: {
+        government: parseInt(government) || 0,
+        ngo: parseInt(ngo) || 0,
+        volunteers: parseInt(volunteers) || 0,
+      },
+      partnerId,
+      status: "approved",
+      approvedBy: req.user.userId,
+      approvedAt: new Date(),
+    });
+
+    await training.save();
+
+    res.status(201).json({
+      message: "Training event created successfully by admin",
+      training,
+    });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Failed to create training", error: error.message });
+  }
+});
+
 // Create training (partner only)
 router.post("/", auth, async (req, res) => {
   try {

@@ -23,6 +23,12 @@ import ViewTraining from "./pages/ViewTraining";
 import MyTrainings from "./pages/MyTrainings";
 import PartnerReports from "./pages/PartnerReports";
 import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminTrainingEvents from "./pages/AdminTrainingEvents";
+import AdminReviewTraining from "./pages/AdminReviewTraining";
+import AdminPartners from "./pages/AdminPartners";
+import AdminManagePartner from "./pages/AdminManagePartner";
+import AdminReports from "./pages/AdminReports";
 
 // Protected Route Component
 function ProtectedRoute({ children, role }) {
@@ -112,6 +118,56 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="partner">
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin Routes */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/training-events"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminTrainingEvents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/training/:id"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminReviewTraining />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/partners"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminPartners />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/partner/:id"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminManagePartner />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute role="admin">
+            <AdminReports />
           </ProtectedRoute>
         }
       />

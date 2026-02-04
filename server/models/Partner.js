@@ -29,7 +29,7 @@ const PartnerSchema = new mongoose.Schema({
   ],
   status: {
     type: String,
-    enum: ["pending", "approved", "rejected"],
+    enum: ["pending", "approved", "rejected", "active", "blocked"],
     default: "pending",
   },
   rejectionReason: String,

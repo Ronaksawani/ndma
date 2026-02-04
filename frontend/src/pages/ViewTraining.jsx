@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI } from "../utils/api";
 import styles from "../styles/Form.module.css";
+import { FiDownload } from "react-icons/fi";
 
 // Fix default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -83,6 +84,23 @@ export default function ViewTraining() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadMedia = async (url, filename) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename || "media";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Failed to download file");
     }
   };
 
@@ -317,6 +335,117 @@ export default function ViewTraining() {
                   />
                 </div>
               </div>
+
+              {/* Submitted Media */}
+              {training.photos && training.photos.length > 0 && (
+                <div className={styles["form-section"]}>
+                  <h3 className={styles["form-section-title"]}>
+                    Submitted Media ({training.photos.length})
+                  </h3>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, 1fr)",
+                      gap: "15px",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    {training.photos.map((photo, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          position: "relative",
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          group: "media",
+                        }}
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.filename}
+                          style={{
+                            width: "100%",
+                            height: "120px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            transition: "transform 0.3s",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.target.style.transform = "scale(1.05)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.target.style.transform = "scale(1)")
+                          }
+                        />
+                        <button
+                          onClick={() => downloadMedia(photo.url, photo.filename)}
+                          style={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            background: "rgba(0, 0, 0, 0.7)",
+                            color: "white",
+                            border: "none",
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "1.2rem",
+                            opacity: "0",
+                            transition: "opacity 0.3s",
+                          }}
+                          onMouseEnter={(e) => (e.target.style.opacity = "1")}
+                          onMouseLeave={(e) => (e.target.style.opacity = "0")}
+                          title="Download photo"
+                        >
+                          <FiDownload />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Attendance Sheet Download */}
+              {training.attendanceSheet && (
+                <div className={styles["form-section"]}>
+                  <h3 className={styles["form-section-title"]}>
+                    Attendance Sheet
+                  </h3>
+                  <button
+                    onClick={() =>
+                      downloadMedia(
+                        training.attendanceSheet.url,
+                        training.attendanceSheet.filename
+                      )
+                    }
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "10px 16px",
+                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontWeight: "600",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      transition: "opacity 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.target.style.opacity = "0.9")}
+                    onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                    title="Download attendance sheet"
+                  >
+                    <FiDownload /> Download ({training.attendanceSheet.filename})
+                  </button>
+                </div>
+              )}
 
               {/* Form Actions */}
               <div className={styles["form-actions"]}>

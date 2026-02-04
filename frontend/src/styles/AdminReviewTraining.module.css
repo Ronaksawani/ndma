@@ -1,0 +1,443 @@
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  overflow-y: auto;
+  margin-left: 200px;
+}
+
+.navigationBar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.navButton {
+  background: white;
+  border: 1px solid #ddd;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  transition: all 0.3s;
+  font-size: 1.2rem;
+}
+
+.navButton:hover {
+  background: #f3f4f6;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.mainContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.leftColumn,
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Training Details Box */
+.trainingDetailsBox,
+.mediaBox,
+.mapBox,
+.adminActionsBox {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.trainingDetailsBox h2,
+.mediaBox h2,
+.mapBox h2,
+.adminActionsBox h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.detailsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.detailRow {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.label {
+  color: #666;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.value {
+  color: #1f2937;
+  font-weight: 500;
+}
+
+/* Media Box */
+.mediaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.mediaHeader h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.downloadAllBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.downloadAllBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.mediaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.mediaItem {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mediaImage {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.mediaImage:hover {
+  transform: scale(1.05);
+}
+
+.downloadPhotoBtn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: opacity 0.3s;
+}
+
+.mediaItem:hover .downloadPhotoBtn {
+  opacity: 1;
+}
+
+.downloadPhotoBtn:hover {
+  background: rgba(102, 126, 234, 0.9);
+}
+
+.attendanceSection {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.noMedia {
+  color: #999;
+  text-align: center;
+  padding: 2rem 0;
+  font-style: italic;
+}
+
+.downloadButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border: 2px solid #3b82f6;
+  color: #3b82f6;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.downloadButton:hover {
+  background: #f0f9ff;
+}
+
+/* Map Box */
+.map {
+  width: 100%;
+  height: 300px;
+  border-radius: 6px;
+}
+
+.noMapMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #999;
+  background: #f9f9f9;
+  border-radius: 6px;
+}
+
+/* Admin Actions Box */
+.commentsSection {
+  margin-bottom: 1.5rem;
+}
+
+.commentsSection label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.commentTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 100px;
+  color: #333;
+}
+
+.commentTextarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.commentTextarea:disabled {
+  background: #f9f9f9;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.actionsButtonGroup {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.approveButton,
+.rejectButton {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.approveButton {
+  background-color: #22c55e;
+  color: white;
+}
+
+.approveButton:hover:not(:disabled) {
+  background-color: #16a34a;
+}
+
+.rejectButton {
+  background-color: #ef4444;
+  color: white;
+}
+
+.rejectButton:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.approveButton:disabled,
+.rejectButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.statusMessage {
+  padding: 1rem;
+  background: #f0f9ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 4px;
+  color: #1e40af;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+@media (max-width: 1200px) {
+  .mainContent {
+    grid-template-columns: 1fr;
+  }
+
+  .leftColumn {
+    order: 1;
+  }
+
+  .rightColumn {
+    order: 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    margin-left: 0;
+    padding: 1rem;
+  }
+
+  .navigationBar {
+    margin-bottom: 1rem;
+  }
+
+  .trainingDetailsBox,
+  .mediaBox,
+  .mapBox,
+  .adminActionsBox {
+    padding: 1rem;
+  }
+
+  .trainingDetailsBox h2,
+  .mediaBox h2,
+  .mapBox h2,
+  .adminActionsBox h2 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .detailRow {
+    grid-template-columns: 100px 1fr;
+  }
+
+  .mediaGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .actionsButtonGroup {
+    flex-direction: column;
+  }
+
+  .map {
+    height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0.75rem;
+  }
+
+  .trainingDetailsBox,
+  .mediaBox,
+  .mapBox,
+  .adminActionsBox {
+    padding: 0.75rem;
+  }
+
+  .detailRow {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .label {
+    font-size: 0.8rem;
+  }
+
+  .value {
+    font-size: 0.9rem;
+  }
+
+  .mediaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .mediaImage {
+    height: 150px;
+  }
+
+  .map {
+    height: 200px;
+  }
+
+  .commentTextarea {
+    min-height: 80px;
+    font-size: 0.85rem;
+  }
+
+  .approveButton,
+  .rejectButton {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+}

@@ -5,6 +5,49 @@ const auth = require("../middleware/auth.js");
 
 const router = express.Router();
 
+// Get training locations with status (for map)
+router.get("/training-locations", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Only admins can access training locations" });
+    }
+
+    const locations = await TrainingEvent.find(
+      { status: "approved" },
+      "title theme location status startDate endDate partnerId"
+    )
+      .populate("partnerId", "organizationName")
+      .exec();
+
+    // Transform data for map
+    const mapLocations = locations
+      .filter((loc) => loc.location && loc.location.latitude && loc.location.longitude)
+      .map((loc) => ({
+        id: loc._id,
+        title: loc.title,
+        theme: loc.theme,
+        latitude: loc.location.latitude,
+        longitude: loc.location.longitude,
+        state: loc.location.state,
+        district: loc.location.district,
+        city: loc.location.city,
+        status: loc.status,
+        startDate: loc.startDate,
+        endDate: loc.endDate,
+        partnerName: loc.partnerId?.organizationName || "Unknown",
+      }));
+
+    res.json(mapLocations);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch training locations",
+      error: error.message,
+    });
+  }
+});
+
 // Dashboard analytics (admin only)
 router.get("/dashboard", auth, async (req, res) => {
   try {

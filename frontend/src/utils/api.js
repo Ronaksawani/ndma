@@ -28,6 +28,7 @@ export const authAPI = {
 export const trainingAPI = {
   getAll: (filters = {}) => api.get("/trainings", { params: filters }),
   getById: (id) => api.get(`/trainings/${id}`),
+  getByPartnerId: (partnerId) => api.get("/trainings", { params: { partnerId } }),
   create: (data) => api.post("/trainings", data),
   update: (id, data) => api.put(`/trainings/${id}`, data),
   delete: (id) => api.delete(`/trainings/${id}`),
@@ -42,6 +43,7 @@ export const partnerAPI = {
   update: (id, data) => api.put(`/partners/${id}`, data),
   approve: (id) => api.patch(`/partners/${id}/approve`),
   reject: (id, reason) => api.patch(`/partners/${id}/reject`, { reason }),
+  updateStatus: (id, status) => api.patch(`/partners/${id}/status`, { status }),
 };
 
 export const uploadAPI = {
@@ -82,6 +84,7 @@ export const analyticsAPI = {
   getDashboard: () => api.get("/analytics/dashboard"),
   getCoverageReport: () => api.get("/analytics/coverage"),
   getGapAnalysis: () => api.get("/analytics/gaps"),
+  getTrainingLocations: () => api.get("/analytics/training-locations"),
 };
 
 export const certificateAPI = {

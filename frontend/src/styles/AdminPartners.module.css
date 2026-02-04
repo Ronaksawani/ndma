@@ -1,0 +1,243 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.container {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 200px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  background: #f5f7fa;
+  border-radius: 8px;
+  padding: 10px 15px;
+  width: 250px;
+  border: 1px solid #e0e0e0;
+}
+
+.searchIcon {
+  color: #999;
+  font-size: 18px;
+  margin-right: 10px;
+}
+
+.searchBox input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 14px;
+  color: #333;
+}
+
+.searchBox input::placeholder {
+  color: #999;
+}
+
+.partnersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.partnerCard {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.partnerCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cardHeader {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 120px;
+}
+
+.partnerLogo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid white;
+}
+
+.cardBody {
+  padding: 16px;
+  flex: 1;
+}
+
+.partnerName {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 12px 0;
+  word-break: break-word;
+}
+
+.partnerDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12px;
+  color: #999;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.value {
+  font-size: 14px;
+  color: #333;
+  word-break: break-all;
+}
+
+.cardFooter {
+  padding: 12px 16px 16px 16px;
+}
+
+.manageButton {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.manageButton:hover {
+  opacity: 0.9;
+}
+
+.manageButton:active {
+  opacity: 0.8;
+}
+
+.loadingState,
+.noData {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  background: white;
+  border-radius: 8px;
+  color: #666;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .container {
+    margin-left: 0;
+    padding: 1.5rem;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .searchBox {
+    width: 100%;
+  }
+
+  .partnersGrid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.3rem;
+  }
+
+  .partnersGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .cardHeader {
+    min-height: 100px;
+  }
+
+  .partnerLogo {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0.8rem;
+  }
+
+  .header {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+  }
+
+  .searchBox {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .partnersGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -14,15 +14,22 @@ router.get("/", auth, async (req, res) => {
         .json({ message: "Only admins can view all partners" });
     }
 
-    const { status = "approved", limit = 50, page = 1 } = req.query;
+    const { status, limit = 50, page = 1 } = req.query;
     const skip = (page - 1) * limit;
 
-    const partners = await Partner.find({ status })
+    let filter = {};
+    
+    // If status is specified, use it; otherwise get all partners (admin view)
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    const partners = await Partner.find(filter)
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
 
-    const total = await Partner.countDocuments({ status });
+    const total = await Partner.countDocuments(filter);
 
     res.json({
       partners,
@@ -90,6 +97,42 @@ router.patch("/:id/approve", auth, async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to approve partner", error: error.message });
+  }
+});
+
+// Update partner status (admin only)
+router.patch("/:id/status", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Only admins can update partner status" });
+    }
+
+    const { status } = req.body;
+
+    if (!["active", "blocked", "approved", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const partner = await Partner.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!partner) {
+      return res.status(404).json({ message: "Partner not found" });
+    }
+
+    res.json({
+      message: `Partner status updated to ${status}`,
+      partner,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to update partner status", error: error.message });
   }
 });
 

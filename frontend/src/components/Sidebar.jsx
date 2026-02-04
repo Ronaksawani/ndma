@@ -42,10 +42,9 @@ export default function Sidebar({ role }) {
 
   const adminLinks = [
     { icon: "📊", label: "Dashboard", href: "/admin/dashboard" },
-    { icon: "📋", label: "All Trainings", href: "/admin/trainings" },
+    { icon: "📋", label: "Training Events", href: "/admin/training-events" },
     { icon: "🤝", label: "Partners", href: "/admin/partners" },
     { icon: "📈", label: "Reports", href: "/admin/reports" },
-    { icon: "⚙️", label: "Settings", href: "/admin/settings" },
   ];
 
   const links = role === "admin" ? adminLinks : partnerLinks;
