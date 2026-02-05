@@ -68,7 +68,7 @@ export default function PartnerDashboard() {
 
   const fetchData = async () => {
     try {
-      const response = await trainingAPI.getAll({ partnerId: user?.id });
+      const response = await trainingAPI.getAll({ partnerId: user?.organizationId });
       const data = response.data.trainings || [];
       setAllTrainings(data);
       setTrainings(data.slice(0, 5)); // Recent submissions

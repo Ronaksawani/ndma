@@ -188,6 +188,14 @@ router.post("/", auth, async (req, res) => {
         .json({ message: "Only partners can create trainings" });
     }
 
+    // Get the partner's organization ID
+    const Partner = require("../models/Partner");
+    const partner = await Partner.findOne({ userId: req.user.userId });
+    
+    if (!partner) {
+      return res.status(404).json({ message: "Partner organization not found" });
+    }
+
     const {
       title,
       theme,
@@ -221,7 +229,7 @@ router.post("/", auth, async (req, res) => {
       trainerName,
       trainerEmail,
       participantsCount: parseInt(participantsCount),
-      partnerId: req.user.userId,
+      partnerId: partner._id,
       status: "pending",
     });
 
@@ -318,13 +326,15 @@ router.put("/:id", auth, async (req, res) => {
     }
 
     // Check authorization
-    if (
-      req.user.role !== "admin" &&
-      training.partnerId.toString() !== req.user.userId.toString()
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to update this training" });
+    if (req.user.role !== "admin") {
+      const Partner = require("../models/Partner");
+      const partner = await Partner.findOne({ userId: req.user.userId });
+      
+      if (!partner || training.partnerId.toString() !== partner._id.toString()) {
+        return res
+          .status(403)
+          .json({ message: "Not authorized to update this training" });
+      }
     }
 
     const {

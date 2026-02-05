@@ -22,8 +22,9 @@ const upload = multer({
 /**
  * Upload single file to Cloudinary
  * POST /api/upload/single
+ * Note: This endpoint is public to allow unauthenticated file uploads during registration
  */
-router.post("/single", auth, upload.single("file"), async (req, res) => {
+router.post("/single", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file provided" });

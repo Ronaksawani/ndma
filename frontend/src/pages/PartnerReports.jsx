@@ -26,7 +26,7 @@ export default function PartnerReports() {
 
   const fetchData = async () => {
     try {
-      const response = await trainingAPI.getAll({ partnerId: user?.id });
+      const response = await trainingAPI.getAll({ partnerId: user?.organizationId });
       const data = response.data.trainings || [];
       setTrainings(data);
     } catch (error) {

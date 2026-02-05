@@ -29,7 +29,7 @@ export default function MyTrainings() {
   const fetchTrainings = async () => {
     setLoading(true);
     try {
-      const response = await trainingAPI.getAll({ partnerId: user?.partnerId });
+      const response = await trainingAPI.getAll({ partnerId: user?.organizationId });
       console.log("Trainings fetched:", response.data);
 
       setTrainings(response.data.trainings || response.data);
