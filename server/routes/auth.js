@@ -94,7 +94,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "your_jwt_secret_key_change_this_in_production",
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     let userData = {
@@ -110,6 +110,7 @@ router.post("/login", async (req, res) => {
         userData = {
           ...userData,
           organizationName: partner.organizationName,
+          organizationType: partner.organizationType,
           contactPerson: partner.contactPerson,
           phone: partner.phone,
           status: partner.status,
@@ -139,7 +140,7 @@ router.post("/refresh", auth, async (req, res) => {
     const token = jwt.sign(
       { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "your_jwt_secret_key_change_this_in_production",
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     res.json({ token });
@@ -194,14 +195,31 @@ router.post("/change-password", auth, async (req, res) => {
 // Get user profile
 router.get("/profile", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select(
-      "-password -__v"
-    );
+    const user = await User.findById(req.user.userId).select("-password -__v");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(user);
+    let userData = user.toObject();
+
+    if (user.organizationId) {
+      const partner = await Partner.findById(user.organizationId);
+      if (partner) {
+        userData = {
+          ...userData,
+          organizationName: partner.organizationName,
+          organizationType: partner.organizationType,
+          contactPerson: partner.contactPerson,
+          phone: partner.phone,
+          state: partner.state,
+          district: partner.district,
+          address: partner.address,
+          status: partner.status,
+        };
+      }
+    }
+
+    res.json(userData);
   } catch (error) {
     res
       .status(500)

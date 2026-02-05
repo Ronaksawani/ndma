@@ -42,10 +42,7 @@ function TrainingModal({ training, onClose }) {
   };
 
   return (
-    <div
-      className={styles["modal-overlay"]}
-      onClick={onClose}
-    >
+    <div className={styles["modal-overlay"]} onClick={onClose}>
       <div
         className={styles["modal-content"]}
         onClick={(e) => e.stopPropagation()}
@@ -65,7 +62,10 @@ function TrainingModal({ training, onClose }) {
             <div className={styles["modal-section"]}>
               <h3>Training Location</h3>
               <MapContainer
-                center={[training.location.latitude, training.location.longitude]}
+                center={[
+                  training.location.latitude,
+                  training.location.longitude,
+                ]}
                 zoom={15}
                 className={styles["map-container"]}
               >
@@ -74,7 +74,10 @@ function TrainingModal({ training, onClose }) {
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
                 <Marker
-                  position={[training.location.latitude, training.location.longitude]}
+                  position={[
+                    training.location.latitude,
+                    training.location.longitude,
+                  ]}
                   icon={blueMarkerIcon}
                 >
                   <Popup>
@@ -114,7 +117,9 @@ function TrainingModal({ training, onClose }) {
                   {training.location.state}
                 </p>
                 {training.location.address && (
-                  <p className={styles["address"]}>{training.location.address}</p>
+                  <p className={styles["address"]}>
+                    {training.location.address}
+                  </p>
                 )}
               </div>
             </div>
@@ -145,36 +150,13 @@ function TrainingModal({ training, onClose }) {
               <strong>Email:</strong>
               <p>{training.trainerEmail}</p>
             </div>
-          </div>
-
-          {training.participantBreakdown &&
-            (training.participantBreakdown.government > 0 ||
-              training.participantBreakdown.ngo > 0 ||
-              training.participantBreakdown.volunteers > 0) && (
-              <div className={styles["modal-section"]}>
-                <h3>Participant Breakdown</h3>
-                <div className={styles["breakdown"]}>
-                  {training.participantBreakdown.government > 0 && (
-                    <div className={styles["breakdown-item"]}>
-                      <span>Government:</span>
-                      <strong>{training.participantBreakdown.government}</strong>
-                    </div>
-                  )}
-                  {training.participantBreakdown.ngo > 0 && (
-                    <div className={styles["breakdown-item"]}>
-                      <span>NGO:</span>
-                      <strong>{training.participantBreakdown.ngo}</strong>
-                    </div>
-                  )}
-                  {training.participantBreakdown.volunteers > 0 && (
-                    <div className={styles["breakdown-item"]}>
-                      <span>Volunteers:</span>
-                      <strong>{training.participantBreakdown.volunteers}</strong>
-                    </div>
-                  )}
-                </div>
+            {training.partnerId?.organizationName && (
+              <div className={styles["detail-item"]}>
+                <strong>Organization:</strong>
+                <p>{training.partnerId.organizationName}</p>
               </div>
             )}
+          </div>
 
           {training.photos && training.photos.length > 0 && (
             <div className={styles["modal-section"]}>
@@ -235,11 +217,13 @@ export default function Calendar() {
 
   const filteredTrainings =
     selectedTheme === "all"
-      ? trainings
-      : trainings.filter((t) => t.theme === selectedTheme);
+      ? trainings.filter((t) => t.status !== "rejected")
+      : trainings.filter(
+          (t) => t.theme === selectedTheme && t.status !== "rejected",
+        );
 
   const upcomingTrainings = filteredTrainings.sort(
-    (a, b) => new Date(a.startDate) - new Date(b.startDate)
+    (a, b) => new Date(a.startDate) - new Date(b.startDate),
   );
 
   return (
@@ -268,7 +252,9 @@ export default function Calendar() {
             >
               <FiX size={16} />
             </button>
-            <h2 className={styles["map-modal-title"]}>All Training Locations</h2>
+            <h2 className={styles["map-modal-title"]}>
+              All Training Locations
+            </h2>
             <MapContainer
               center={[20.5937, 78.9629]}
               zoom={5}
@@ -281,7 +267,7 @@ export default function Calendar() {
               {trainings
                 .filter(
                   (training) =>
-                    training.location.latitude && training.location.longitude
+                    training.location.latitude && training.location.longitude,
                 )
                 .map((training) => (
                   <Marker
@@ -293,23 +279,37 @@ export default function Calendar() {
                     icon={blueMarkerIcon}
                   >
                     <Popup>
-                      <div style={{ minWidth: '200px' }}>
-                        <strong style={{ fontSize: '14px' }}>{training.title}</strong>
+                      <div style={{ minWidth: "200px" }}>
+                        <strong style={{ fontSize: "14px" }}>
+                          {training.title}
+                        </strong>
                         <br />
-                        <span style={{ fontSize: '12px', color: '#666' }}>
+                        <span style={{ fontSize: "12px", color: "#666" }}>
                           {training.theme}
                         </span>
                         <br />
-                        <span style={{ fontSize: '12px' }}>
+                        <span style={{ fontSize: "12px" }}>
                           {training.location.city}, {training.location.state}
                         </span>
                         <br />
-                        <span style={{ fontSize: '12px', color: '#0472ff' }}>
+                        <span style={{ fontSize: "12px", color: "#0472ff" }}>
                           {new Date(training.startDate).toLocaleDateString()}
                         </span>
                         <br />
-                        <span style={{ fontSize: '12px', color: '#059669', fontWeight: '600' }}>
-                          <FiUsers style={{ verticalAlign: 'middle', marginRight: '4px' }} size={14} />
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            color: "#059669",
+                            fontWeight: "600",
+                          }}
+                        >
+                          <FiUsers
+                            style={{
+                              verticalAlign: "middle",
+                              marginRight: "4px",
+                            }}
+                            size={14}
+                          />
                           {training.participantsCount || 0} Participants
                         </span>
                       </div>
@@ -349,7 +349,7 @@ export default function Calendar() {
                 className={`${styles["filter-btn"]} ${styles["map-btn"]}`}
                 onClick={() => setShowMapModal(true)}
               >
-                <FiMapPin style={{ marginRight: '6px' }} />
+                <FiMapPin style={{ marginRight: "6px" }} />
                 Map
               </button>
             </div>
@@ -374,10 +374,12 @@ export default function Calendar() {
                         {
                           month: "short",
                           day: "numeric",
-                        }
+                        },
                       )}
                     </div>
-                    <span className={styles["theme-tag"]}>{training.theme}</span>
+                    <span className={styles["theme-tag"]}>
+                      {training.theme}
+                    </span>
                   </div>
 
                   <div className={styles["card-content"]}>
@@ -396,7 +398,7 @@ export default function Calendar() {
                               year: "numeric",
                               month: "long",
                               day: "numeric",
-                            }
+                            },
                           )}
                         </span>
                       </div>
@@ -406,12 +408,12 @@ export default function Calendar() {
                         <span>
                           {new Date(training.startDate).toLocaleTimeString(
                             "en-US",
-                            { hour: "2-digit", minute: "2-digit" }
+                            { hour: "2-digit", minute: "2-digit" },
                           )}{" "}
                           -{" "}
                           {new Date(training.endDate).toLocaleTimeString(
                             "en-US",
-                            { hour: "2-digit", minute: "2-digit" }
+                            { hour: "2-digit", minute: "2-digit" },
                           )}
                         </span>
                       </div>
@@ -464,7 +466,7 @@ export default function Calendar() {
               <div className={styles["stat-number"]}>
                 {upcomingTrainings.reduce(
                   (sum, t) => sum + t.participantsCount,
-                  0
+                  0,
                 )}
               </div>
               <div className={styles["stat-label"]}>Total Participants</div>
@@ -490,4 +492,5 @@ export default function Calendar() {
         </p>
       </footer>
     </div>
-  );}
+  );
+}

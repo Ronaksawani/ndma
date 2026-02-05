@@ -37,6 +37,17 @@ export default function Profile() {
 
   const [districts, setDistricts] = useState([]);
 
+  // Helper function to format organization type
+  const getOrganizationTypeLabel = (type) => {
+    const typeMap = {
+      govt: "Government",
+      ngo: "NGO",
+      private: "Private",
+      training: "Training Institute",
+    };
+    return typeMap[type] || "Organization";
+  };
+
   useEffect(() => {
     // Initialize form with user data
     if (user) {
@@ -148,7 +159,9 @@ export default function Profile() {
               <div className="user-avatar">
                 {user?.contactPerson?.[0]?.toUpperCase()}
               </div>
-              <span>Partner (NGO/SDMA)</span>
+              <span>
+                Partner ({getOrganizationTypeLabel(user?.organizationType)})
+              </span>
             </div>
           </div>
         </div>

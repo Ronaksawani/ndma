@@ -13,6 +13,7 @@ import "leaflet/dist/leaflet.css";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import PartnerRegistrationGuide from "./pages/PartnerRegistrationGuide";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import Calendar from "./pages/Calendar";
 import Resources from "./pages/Resources";
@@ -60,6 +61,10 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route
+        path="/partner-registration-guide"
+        element={<PartnerRegistrationGuide />}
+      />
       <Route path="/verify" element={<VerifyCertificate />} />
       <Route path="/calendar" element={<Calendar />} />
       <Route path="/resources" element={<Resources />} />
@@ -160,6 +165,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="admin">
             <AdminManagePartner />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/add-partner"
+        element={
+          <ProtectedRoute role="admin">
+            <Register />
           </ProtectedRoute>
         }
       />

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
-import { analyticsAPI } from "../utils/api";
+import { analyticsAPI, partnerAPI } from "../utils/api";
 import Sidebar from "../components/Sidebar";
 import styles from "../styles/AdminDashboard.module.css";
 import { FiBarChart2, FiUsers, FiMapPin, FiBell } from "react-icons/fi";
@@ -108,7 +108,7 @@ const AdminDashboard = () => {
         statesCovered: dashboardRes.data.stats.statesCovered,
       });
 
-      // Transform recent activities
+      // Combine training activities with pending partner requests
       const activities = dashboardRes.data.recentActivities.map((training) => ({
         id: training._id,
         title: training.title,
@@ -116,7 +116,30 @@ const AdminDashboard = () => {
         timestamp: new Date(training.createdAt),
         partner: training.partnerId?.organizationName || "Unknown",
       }));
-      setRecentActivities(activities);
+
+      // Fetch pending partner requests
+      try {
+        const partnersRes = await partnerAPI.getAll({ status: "pending" });
+        const pendingPartners = partnersRes.data.partners || [];
+
+        const pendingActivities = pendingPartners.map((partner) => ({
+          id: partner._id,
+          title: `New Partner Request: ${partner.organizationName}`,
+          type: "Partner Request",
+          timestamp: new Date(partner.createdAt),
+          partner: partner.organizationName,
+        }));
+
+        // Combine and sort by timestamp (newest first)
+        const allActivities = [...activities, ...pendingActivities].sort(
+          (a, b) => b.timestamp - a.timestamp,
+        );
+
+        setRecentActivities(allActivities);
+      } catch (err) {
+        console.error("Error fetching pending partners:", err);
+        setRecentActivities(activities);
+      }
 
       // Fetch training locations for map
       const locationsRes = await analyticsAPI.getTrainingLocations();
@@ -161,200 +184,206 @@ const AdminDashboard = () => {
     <div className={styles.adminLayout}>
       <Sidebar role="admin" />
       <div className={styles.dashboardContainer}>
-      <div className={styles.header}>
-        <h1>NDMA Admin Dashboard</h1>
-      </div>
+        <div className={styles.header}>
+          <h1>NDMA Admin Dashboard</h1>
+        </div>
 
-      {error && <div className={styles.errorBanner}>{error}</div>}
+        {error && <div className={styles.errorBanner}>{error}</div>}
 
-      {/* Statistics Cards */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>
-            <FiBarChart2 />
-          </div>
-          <div className={styles.statContent}>
-            <p className={styles.statLabel}>Total Trainings</p>
-            <h2 className={styles.statValue}>{stats.totalTrainings}</h2>
-          </div>
-          <div className={styles.chart}>
-            <div className={styles.barChart}>
-              <div className={styles.bar} style={{ height: "40%" }}></div>
-              <div className={styles.bar} style={{ height: "60%" }}></div>
-              <div className={styles.bar} style={{ height: "80%" }}></div>
-              <div className={styles.bar} style={{ height: "50%" }}></div>
+        {/* Statistics Cards */}
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}>
+              <FiBarChart2 />
             </div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>
-            <FiUsers />
-          </div>
-          <div className={styles.statContent}>
-            <p className={styles.statLabel}>Volunteer Trained</p>
-            <h2 className={styles.statValue}>
-              {(stats.totalParticipants / 1000).toFixed(1)}K+
-            </h2>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <div className={styles.statIcon}>
-            <FiMapPin />
-          </div>
-          <div className={styles.statContent}>
-            <p className={styles.statLabel}>States Covered</p>
-            <h2 className={styles.statValue}>{stats.statesCovered}</h2>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className={styles.mainContent}>
-        {/* Map Section */}
-        <div className={styles.mapSection}>
-          <div className={styles.mapHeader}>
-            <h3>Training Locations</h3>
-            <div className={styles.legend}>
-              <div className={styles.legendItem}>
-                <span className={`${styles.legendDot} ${styles.planned}`}></span>
-                <span>Planned</span>
-              </div>
-              <div className={styles.legendItem}>
-                <span className={`${styles.legendDot} ${styles.completed}`}></span>
-                <span>Completed</span>
+            <div className={styles.statContent}>
+              <p className={styles.statLabel}>Total Trainings</p>
+              <h2 className={styles.statValue}>{stats.totalTrainings}</h2>
+            </div>
+            <div className={styles.chart}>
+              <div className={styles.barChart}>
+                <div className={styles.bar} style={{ height: "40%" }}></div>
+                <div className={styles.bar} style={{ height: "60%" }}></div>
+                <div className={styles.bar} style={{ height: "80%" }}></div>
+                <div className={styles.bar} style={{ height: "50%" }}></div>
               </div>
             </div>
           </div>
 
-          {/* Map Filters */}
-          <div className={styles.mapFilters}>
-            <div className={styles.filterGroup}>
-              <label>Status:</label>
-              <select
-                value={filters.status}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, status: e.target.value }))
-                }
-              >
-                <option value="all">All Status</option>
-                <option value="approved">Completed</option>
-                <option value="pending">Planned</option>
-              </select>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}>
+              <FiUsers />
+            </div>
+            <div className={styles.statContent}>
+              <p className={styles.statLabel}>Volunteer Trained</p>
+              <h2 className={styles.statValue}>
+                {(stats.totalParticipants / 1000).toFixed(1)}K+
+              </h2>
+            </div>
+          </div>
+
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}>
+              <FiMapPin />
+            </div>
+            <div className={styles.statContent}>
+              <p className={styles.statLabel}>States Covered</p>
+              <h2 className={styles.statValue}>{stats.statesCovered}</h2>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className={styles.mainContent}>
+          {/* Map Section */}
+          <div className={styles.mapSection}>
+            <div className={styles.mapHeader}>
+              <h3>Training Locations</h3>
+              <div className={styles.legend}>
+                <div className={styles.legendItem}>
+                  <span
+                    className={`${styles.legendDot} ${styles.planned}`}
+                  ></span>
+                  <span>Planned</span>
+                </div>
+                <div className={styles.legendItem}>
+                  <span
+                    className={`${styles.legendDot} ${styles.completed}`}
+                  ></span>
+                  <span>Completed</span>
+                </div>
+              </div>
             </div>
 
-            <div className={styles.filterGroup}>
-              <label>State:</label>
-              <select
-                value={filters.state}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, state: e.target.value }))
-                }
-              >
-                <option value="all">All States</option>
-                {[...new Set(trainingLocations.map((loc) => loc.state).filter(Boolean))].map(
-                  (state) => (
+            {/* Map Filters */}
+            <div className={styles.mapFilters}>
+              <div className={styles.filterGroup}>
+                <label>Status:</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, status: e.target.value }))
+                  }
+                >
+                  <option value="all">All Status</option>
+                  <option value="approved">Completed</option>
+                  <option value="pending">Planned</option>
+                </select>
+              </div>
+
+              <div className={styles.filterGroup}>
+                <label>State:</label>
+                <select
+                  value={filters.state}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, state: e.target.value }))
+                  }
+                >
+                  <option value="all">All States</option>
+                  {[
+                    ...new Set(
+                      trainingLocations.map((loc) => loc.state).filter(Boolean),
+                    ),
+                  ].map((state) => (
                     <option key={state} value={state}>
                       {state}
                     </option>
-                  )
-                )}
-              </select>
-            </div>
+                  ))}
+                </select>
+              </div>
 
-            <div className={styles.filterGroup}>
-              <label>Theme:</label>
-              <select
-                value={filters.theme}
-                onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, theme: e.target.value }))
-                }
-              >
-                <option value="all">All Themes</option>
-                {themes.map((theme) => (
-                  <option key={theme} value={theme}>
-                    {theme}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {filteredLocations.length > 0 ? (
-            <MapContainer
-              center={[20.5937, 78.9629]}
-              zoom={4}
-              className={styles.mapContainer}
-            >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; OpenStreetMap contributors'
-              />
-              {filteredLocations.map((location) => (
-                <Marker
-                  key={location.id}
-                  position={[location.latitude, location.longitude]}
-                  icon={
-                    location.status === "approved"
-                      ? completedIcon
-                      : plannedIcon
+              <div className={styles.filterGroup}>
+                <label>Theme:</label>
+                <select
+                  value={filters.theme}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, theme: e.target.value }))
                   }
                 >
-                  <Popup>
-                    <div className={styles.popupContent}>
-                      <h4>{location.title}</h4>
-                      <p>
-                        <strong>Location:</strong> {location.city},{" "}
-                        {location.state}
-                      </p>
-                      <p>
-                        <strong>Partner:</strong> {location.partnerName}
-                      </p>
-                      <p>
-                        <strong>Date:</strong>{" "}
-                        {new Date(location.startDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            </MapContainer>
-          ) : (
-            <div className={styles.noDataMessage}>
-              <p>No training locations available</p>
+                  <option value="all">All Themes</option>
+                  {themes.map((theme) => (
+                    <option key={theme} value={theme}>
+                      {theme}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Recent Activities Section */}
-        <div className={styles.activitiesSection}>
-          <div className={styles.activitiesHeader}>
-            <h3>
-              <FiBell /> Recent Activities
-            </h3>
-          </div>
-
-          <div className={styles.activitiesList}>
-            {recentActivities.length > 0 ? (
-              recentActivities.map((activity) => (
-                <div key={activity.id} className={styles.activityItem}>
-                  <div className={styles.activityDot}></div>
-                  <div className={styles.activityContent}>
-                    <p className={styles.activityTitle}>{activity.title}</p>
-                    <p className={styles.activityMeta}>{activity.partner}</p>
-                  </div>
-                  <p className={styles.activityTime}>
-                    {getTimeAgo(activity.timestamp)}
-                  </p>
-                </div>
-              ))
+            {filteredLocations.length > 0 ? (
+              <MapContainer
+                center={[20.5937, 78.9629]}
+                zoom={4}
+                className={styles.mapContainer}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+                {filteredLocations.map((location) => (
+                  <Marker
+                    key={location.id}
+                    position={[location.latitude, location.longitude]}
+                    icon={
+                      location.status === "approved"
+                        ? completedIcon
+                        : plannedIcon
+                    }
+                  >
+                    <Popup>
+                      <div className={styles.popupContent}>
+                        <h4>{location.title}</h4>
+                        <p>
+                          <strong>Location:</strong> {location.city},{" "}
+                          {location.state}
+                        </p>
+                        <p>
+                          <strong>Partner:</strong> {location.partnerName}
+                        </p>
+                        <p>
+                          <strong>Date:</strong>{" "}
+                          {new Date(location.startDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+              </MapContainer>
             ) : (
-              <p className={styles.noActivities}>No recent activities</p>
+              <div className={styles.noDataMessage}>
+                <p>No training locations available</p>
+              </div>
             )}
           </div>
+
+          {/* Recent Activities Section */}
+          <div className={styles.activitiesSection}>
+            <div className={styles.activitiesHeader}>
+              <h3>
+                <FiBell /> Recent Activities
+              </h3>
+            </div>
+
+            <div className={styles.activitiesList}>
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity) => (
+                  <div key={activity.id} className={styles.activityItem}>
+                    <div className={styles.activityDot}></div>
+                    <div className={styles.activityContent}>
+                      <p className={styles.activityTitle}>{activity.title}</p>
+                      <p className={styles.activityMeta}>{activity.partner}</p>
+                    </div>
+                    <p className={styles.activityTime}>
+                      {getTimeAgo(activity.timestamp)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className={styles.noActivities}>No recent activities</p>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

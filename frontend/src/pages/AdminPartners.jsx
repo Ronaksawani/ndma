@@ -39,7 +39,7 @@ const AdminPartners = () => {
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
           partner.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          partner.phone?.toLowerCase().includes(searchTerm.toLowerCase())
+          partner.phone?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
       setFilteredPartners(filtered);
     }
@@ -75,6 +75,12 @@ const AdminPartners = () => {
         <div className={styles.header}>
           <div className={styles.headerContent}>
             <h1>Partner Organizations</h1>
+            <button
+              className={styles.addPartnerButton}
+              onClick={() => navigate("/admin/add-partner")}
+            >
+              Add Partner
+            </button>
           </div>
 
           <div className={styles.searchBox}>
