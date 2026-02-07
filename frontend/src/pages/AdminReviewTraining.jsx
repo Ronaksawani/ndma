@@ -163,6 +163,12 @@ const AdminReviewTraining = () => {
               <h2>Training Details</h2>
               <div className={styles.detailsGrid}>
                 <div className={styles.detailRow}>
+                  <span className={styles.label}>Training Title</span>
+                  <span className={styles.value}>
+                    {training.title || "N/A"}
+                  </span>
+                </div>
+                <div className={styles.detailRow}>
                   <span className={styles.label}>Organizer</span>
                   <span className={styles.value}>
                     {training.partnerId?.organizationName || "N/A"}
@@ -173,7 +179,7 @@ const AdminReviewTraining = () => {
                   <span className={styles.value}>
                     {training.startDate && training.endDate
                       ? `${formatDate(training.startDate)} - ${formatDate(
-                          training.endDate
+                          training.endDate,
                         )}`
                       : "N/A"}
                   </span>
@@ -186,7 +192,9 @@ const AdminReviewTraining = () => {
                 </div>
                 <div className={styles.detailRow}>
                   <span className={styles.label}>Theme</span>
-                  <span className={styles.value}>{training.theme || "N/A"}</span>
+                  <span className={styles.value}>
+                    {training.theme || "N/A"}
+                  </span>
                 </div>
                 <div className={styles.detailRow}>
                   <span className={styles.label}>Participants</span>
@@ -242,11 +250,12 @@ const AdminReviewTraining = () => {
                     onClick={() =>
                       downloadMedia(
                         training.attendanceSheet.url,
-                        training.attendanceSheet.filename
+                        training.attendanceSheet.filename,
                       )
                     }
                   >
-                    <FiDownload /> Download Participant List ({training.attendanceSheet.filename})
+                    <FiDownload /> Download Participant List (
+                    {training.attendanceSheet.filename})
                   </button>
                 </div>
               )}
@@ -259,13 +268,16 @@ const AdminReviewTraining = () => {
             <div className={styles.mapBox}>
               {training.location?.latitude && training.location?.longitude ? (
                 <MapContainer
-                  center={[training.location.latitude, training.location.longitude]}
+                  center={[
+                    training.location.latitude,
+                    training.location.longitude,
+                  ]}
                   zoom={13}
                   className={styles.map}
                 >
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; OpenStreetMap contributors'
+                    attribution="&copy; OpenStreetMap contributors"
                   />
                   <Marker
                     position={[
@@ -315,7 +327,8 @@ const AdminReviewTraining = () => {
 
               {training.status !== "pending" && (
                 <div className={styles.statusMessage}>
-                  Training status: <strong>{training.status.toUpperCase()}</strong>
+                  Training status:{" "}
+                  <strong>{training.status.toUpperCase()}</strong>
                 </div>
               )}
             </div>

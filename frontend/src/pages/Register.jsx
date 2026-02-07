@@ -24,6 +24,7 @@ export default function Register() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [districts, setDistricts] = useState([]);
 
   const handleChange = (e) => {
@@ -34,6 +35,10 @@ export default function Register() {
       const selectedStateDistricts = statesDistrictsData.districts[value] || [];
       setDistricts(selectedStateDistricts);
       setFormData((prev) => ({ ...prev, [name]: value, district: "" }));
+    } else if (name === "phone") {
+      // Only allow digits and max 10 digits
+      const phoneValue = value.replace(/\D/g, ""); // Remove non-digits
+      setFormData((prev) => ({ ...prev, [name]: phoneValue }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -42,6 +47,12 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validate phone number
+    if (formData.phone.length !== 10) {
+      setPhoneError("Phone number must be exactly 10 digits");
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -185,9 +196,25 @@ export default function Register() {
             type="tel"
             name="phone"
             value={formData.phone}
-            onChange={handleChange}
+            onChange={(e) => {
+              handleChange(e);
+              setPhoneError(""); // Clear error when user types
+            }}
+            placeholder="Enter 10 digit phone number"
+            maxLength="10"
             required
           />
+          {phoneError && (
+            <div
+              style={{
+                color: "#dc3545",
+                fontSize: "0.875rem",
+                marginTop: "0.25rem",
+              }}
+            >
+              {phoneError}
+            </div>
+          )}
         </div>
       </div>
 
