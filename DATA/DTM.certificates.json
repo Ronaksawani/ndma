@@ -1,0 +1,47 @@
+[
+  {
+    "certificateId": "CERT-2024-001",
+    "traineeName": "Amit Kumar Singh",
+    "trainingTitle": "Disaster Management Fundamentals",
+    "issueDate": "2024-03-04T10:00:00Z",
+    "certificateUrl": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360113/certificates/cert_amit_001.pdf",
+    "verified": true,
+    "createdAt": "2024-03-04T10:00:00Z"
+  },
+  {
+    "certificateId": "CERT-2024-002",
+    "traineeName": "Neha Sharma",
+    "trainingTitle": "Disaster Management Fundamentals",
+    "issueDate": "2024-03-04T10:00:00Z",
+    "certificateUrl": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360114/certificates/cert_neha_001.pdf",
+    "verified": true,
+    "createdAt": "2024-03-04T10:00:00Z"
+  },
+  {
+    "certificateId": "CERT-2024-003",
+    "traineeName": "Rajesh Patel",
+    "trainingTitle": "Disaster Management Fundamentals",
+    "issueDate": "2024-03-04T10:00:00Z",
+    "certificateUrl": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360115/certificates/cert_rajesh_001.pdf",
+    "verified": true,
+    "createdAt": "2024-03-04T10:00:00Z"
+  },
+  {
+    "certificateId": "CERT-2024-004",
+    "traineeName": "Dr. Vikram Verma",
+    "trainingTitle": "First Aid & Emergency Response",
+    "issueDate": "2024-03-13T10:00:00Z",
+    "certificateUrl": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360116/certificates/cert_vikram_001.pdf",
+    "verified": true,
+    "createdAt": "2024-03-13T10:00:00Z"
+  },
+  {
+    "certificateId": "CERT-2024-005",
+    "traineeName": "Priya Singh",
+    "trainingTitle": "First Aid & Emergency Response",
+    "issueDate": "2024-03-13T10:00:00Z",
+    "certificateUrl": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360117/certificates/cert_priya_001.pdf",
+    "verified": true,
+    "createdAt": "2024-03-13T10:00:00Z"
+  }
+]

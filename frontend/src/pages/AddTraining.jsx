@@ -318,9 +318,9 @@ export default function AddTraining() {
                         required
                       >
                         <option value="">Select Theme</option>
-                        <option value="Flood Management">Flood Rescue</option>
+                        <option value="Flood Management">Flood Management</option>
                         <option value="Earthquake Safety">
-                          Earthquake Preparedness
+                          Earthquake Safety
                         </option>
                         <option value="Cyclone Management">
                           Cyclone Management

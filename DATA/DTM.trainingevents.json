@@ -1,0 +1,165 @@
+[
+  {
+    "title": "Disaster Management Fundamentals",
+    "theme": "Flood Management",
+    "description": "Comprehensive training on disaster management basics including prevention, mitigation, and response strategies.",
+    "startDate": "2024-03-01T09:00:00Z",
+    "endDate": "2024-03-03T17:00:00Z",
+    "location": {
+      "state": "Maharashtra",
+      "district": "Mumbai",
+      "city": "Mumbai",
+      "latitude": 19.076,
+      "longitude": 72.8777,
+      "address": "Training Center, Bandra, Mumbai"
+    },
+    "trainerName": "Dr. Rajesh Kumar",
+    "trainerEmail": "trainer1@ndma.org",
+    "participantsCount": 75,
+    "participantBreakdown": {
+      "government": 25,
+      "ngo": 30,
+      "volunteers": 20
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000001" },
+    "status": "approved",
+    "approvedAt": "2024-02-20T10:00:00Z",
+    "createdAt": "2024-02-15T10:00:00Z"
+  },
+  {
+    "title": "First Aid & Emergency Response",
+    "theme": "First Aid",
+    "description": "Training on first aid techniques and emergency medical response procedures.",
+    "startDate": "2024-03-10T10:00:00Z",
+    "endDate": "2024-03-12T17:00:00Z",
+    "location": {
+      "state": "Delhi",
+      "district": "New Delhi",
+      "city": "New Delhi",
+      "latitude": 28.7041,
+      "longitude": 77.1025,
+      "address": "National Training Center, Lutyens Delhi"
+    },
+    "trainerName": "Dr. Priya Sharma",
+    "trainerEmail": "trainer2@ndma.org",
+    "participantsCount": 60,
+    "participantBreakdown": {
+      "government": 20,
+      "ngo": 25,
+      "volunteers": 15
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000002" },
+    "status": "approved",
+    "approvedAt": "2024-03-01T10:00:00Z",
+    "createdAt": "2024-02-25T10:00:00Z"
+  },
+  {
+    "title": "Flood Management & Prevention",
+    "theme": "Flood Management",
+    "description": "Advanced training on flood prevention, management, and community education.",
+    "startDate": "2024-03-15T09:30:00Z",
+    "endDate": "2024-03-17T16:30:00Z",
+    "location": {
+      "state": "Karnataka",
+      "district": "Bangalore",
+      "city": "Bangalore",
+      "latitude": 12.9716,
+      "longitude": 77.5946,
+      "address": "State Disaster Management Office, Bangalore"
+    },
+    "trainerName": "Vikram Singh",
+    "trainerEmail": "trainer3@ndma.org",
+    "participantsCount": 85,
+    "participantBreakdown": {
+      "government": 30,
+      "ngo": 35,
+      "volunteers": 20
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000003" },
+    "status": "approved",
+    "approvedAt": "2024-03-05T10:00:00Z",
+    "createdAt": "2024-02-28T10:00:00Z"
+  },
+  {
+    "title": "Earthquake Safety & Preparedness",
+    "theme": "Earthquake Safety",
+    "description": "Comprehensive guide on earthquake safety, building resilience, and community preparedness.",
+    "startDate": "2024-03-20T09:00:00Z",
+    "endDate": "2024-03-22T17:00:00Z",
+    "location": {
+      "state": "Tamil Nadu",
+      "district": "Chennai",
+      "city": "Chennai",
+      "latitude": 13.0827,
+      "longitude": 80.2707,
+      "address": "Community Training Hall, Nungambakkam"
+    },
+    "trainerName": "Dr. Anjali Verma",
+    "trainerEmail": "trainer4@ndma.org",
+    "participantsCount": 95,
+    "participantBreakdown": {
+      "government": 35,
+      "ngo": 40,
+      "volunteers": 20
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000004" },
+    "status": "pending",
+    "createdAt": "2024-03-01T10:00:00Z"
+  }
+]

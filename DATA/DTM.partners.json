@@ -1,0 +1,86 @@
+[
+  {
+    "organizationName": "Emergency Relief Foundation",
+    "organizationType": "ngo",
+    "state": "Maharashtra",
+    "district": "Mumbai",
+    "address": "123 Relief Street, Mumbai, Maharashtra 400001",
+    "contactPerson": "Priya Sharma",
+    "email": "partner1@ngo.org",
+    "phone": "9876543211",
+    "userId": { "$oid": "000000000000000000000002" },
+    "documents": [
+      {
+        "filename": "registration_cert.pdf",
+        "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360100/partners/registration.pdf",
+        "uploadedAt": "2024-01-20T10:00:00Z"
+      }
+    ],
+    "status": "approved",
+    "approvedAt": "2024-01-25T10:00:00Z",
+    "createdAt": "2024-01-20T10:00:00Z"
+  },
+  {
+    "organizationName": "National Training Institute",
+    "organizationType": "training",
+    "state": "Delhi",
+    "district": "New Delhi",
+    "address": "456 Training Avenue, New Delhi 110001",
+    "contactPerson": "Vikram Singh",
+    "email": "partner2@training.org",
+    "phone": "9876543212",
+    "userId": { "$oid": "000000000000000000000003" },
+    "documents": [
+      {
+        "filename": "accreditation.pdf",
+        "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360101/partners/accreditation.pdf",
+        "uploadedAt": "2024-01-22T10:00:00Z"
+      }
+    ],
+    "status": "approved",
+    "approvedAt": "2024-01-27T10:00:00Z",
+    "createdAt": "2024-01-22T10:00:00Z"
+  },
+  {
+    "organizationName": "State Disaster Management Authority",
+    "organizationType": "govt",
+    "state": "Karnataka",
+    "district": "Bangalore",
+    "address": "789 Government Plaza, Bangalore 560001",
+    "contactPerson": "Anjali Verma",
+    "email": "partner3@govt.org",
+    "phone": "9876543213",
+    "userId": { "$oid": "000000000000000000000004" },
+    "documents": [
+      {
+        "filename": "govt_notification.pdf",
+        "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360102/partners/notification.pdf",
+        "uploadedAt": "2024-02-01T10:00:00Z"
+      }
+    ],
+    "status": "approved",
+    "approvedAt": "2024-02-03T10:00:00Z",
+    "createdAt": "2024-02-01T10:00:00Z"
+  },
+  {
+    "organizationName": "Community Disaster Response Team",
+    "organizationType": "ngo",
+    "state": "Tamil Nadu",
+    "district": "Chennai",
+    "address": "321 Community Road, Chennai 600001",
+    "contactPerson": "Rahul Patel",
+    "email": "partner4@disaster.org",
+    "phone": "9876543214",
+    "userId": { "$oid": "000000000000000000000005" },
+    "documents": [
+      {
+        "filename": "license.pdf",
+        "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/partners/license.pdf",
+        "uploadedAt": "2024-02-05T10:00:00Z"
+      }
+    ],
+    "status": "approved",
+    "approvedAt": "2024-02-06T10:00:00Z",
+    "createdAt": "2024-02-05T10:00:00Z"
+  }
+]

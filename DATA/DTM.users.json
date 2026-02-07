@@ -1,0 +1,47 @@
+[
+  {
+    "email": "admin@ndma.gov.in",
+    "password": "admin@ndma.gov.in",
+    "role": "admin",
+    "contactPerson": "Rajesh Kumar",
+    "phone": "9876543210",
+    "status": "active",
+    "createdAt": "2024-01-15T10:00:00Z"
+  },
+  {
+    "email": "partner1@ngo.org",
+    "password": "partner1@ngo.org",
+    "role": "partner",
+    "contactPerson": "Priya Sharma",
+    "phone": "9876543211",
+    "status": "active",
+    "createdAt": "2024-01-20T10:00:00Z"
+  },
+  {
+    "email": "partner2@training.org",
+    "password": "partner2@training.org",
+    "role": "partner",
+    "contactPerson": "Vikram Singh",
+    "phone": "9876543212",
+    "status": "active",
+    "createdAt": "2024-01-22T10:00:00Z"
+  },
+  {
+    "email": "partner3@govt.org",
+    "password": "partner3@govt.org",
+    "role": "partner",
+    "contactPerson": "Anjali Verma",
+    "phone": "9876543213",
+    "status": "active",
+    "createdAt": "2024-02-01T10:00:00Z"
+  },
+  {
+    "email": "partner4@disaster.org",
+    "password": "partner4@disaster.org",
+    "role": "partner",
+    "contactPerson": "Rahul Patel",
+    "phone": "9876543214",
+    "status": "active",
+    "createdAt": "2024-02-05T10:00:00Z"
+  }
+]
