@@ -18,7 +18,7 @@ L.Icon.Default.mergeOptions({
 });
 
 // Custom marker icons
-const plannedIcon = new L.Icon({
+const pendingIcon = new L.Icon({
   iconUrl:
     "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
   shadowUrl:
@@ -242,9 +242,9 @@ const AdminDashboard = () => {
               <div className={styles.legend}>
                 <div className={styles.legendItem}>
                   <span
-                    className={`${styles.legendDot} ${styles.planned}`}
+                    className={`${styles.legendDot} ${styles.pending}`}
                   ></span>
-                  <span>Planned</span>
+                  <span>Pending</span>
                 </div>
                 <div className={styles.legendItem}>
                   <span
@@ -266,8 +266,8 @@ const AdminDashboard = () => {
                   }
                 >
                   <option value="all">All Status</option>
-                  <option value="approved">Completed</option>
-                  <option value="pending">Planned</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
                 </select>
               </div>
 
@@ -327,7 +327,7 @@ const AdminDashboard = () => {
                     icon={
                       location.status === "approved"
                         ? completedIcon
-                        : plannedIcon
+                        : pendingIcon
                     }
                   >
                     <Popup>

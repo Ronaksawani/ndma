@@ -15,15 +15,18 @@ router.get("/training-locations", auth, async (req, res) => {
     }
 
     const locations = await TrainingEvent.find(
-      { status: "approved" },
-      "title theme location status startDate endDate partnerId"
+      { status: { $in: ["approved", "pending"] } },
+      "title theme location status startDate endDate partnerId",
     )
       .populate("partnerId", "organizationName")
       .exec();
 
     // Transform data for map
     const mapLocations = locations
-      .filter((loc) => loc.location && loc.location.latitude && loc.location.longitude)
+      .filter(
+        (loc) =>
+          loc.location && loc.location.latitude && loc.location.longitude,
+      )
       .map((loc) => ({
         id: loc._id,
         title: loc.title,
@@ -69,6 +72,12 @@ router.get("/dashboard", auth, async (req, res) => {
       { $group: { _id: null, total: { $sum: "$participantsCount" } } },
     ]);
 
+    // Count actual certificates issued from participants collection
+    const Participant = require("../models/Participant.js");
+    const certificatesIssued = await Participant.countDocuments({
+      certificateIssued: true,
+    });
+
     // Recent activities
     const recentTrainings = await TrainingEvent.find({ status: "approved" })
       .populate("partnerId", "organizationName")
@@ -81,6 +90,7 @@ router.get("/dashboard", auth, async (req, res) => {
         activePartners,
         statesCovered: statesCount.length,
         totalParticipants: totalParticipants[0]?.total || 0,
+        certificatesIssued,
       },
       recentActivities: recentTrainings,
     });
@@ -105,9 +115,10 @@ router.get("/coverage", auth, async (req, res) => {
         $group: {
           _id: "$location.state",
           count: { $sum: 1 },
-          participants: { $sum: "$participantsCount" },
+          participants: { $sum: { $ifNull: ["$participantsCount", 0] } },
         },
       },
+      { $sort: { participants: -1 } },
     ]);
 
     const participantBreakdown = await TrainingEvent.aggregate([
@@ -132,12 +143,10 @@ router.get("/coverage", auth, async (req, res) => {
       },
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to fetch coverage report",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to fetch coverage report",
+      error: error.message,
+    });
   }
 });
 
@@ -188,7 +197,7 @@ router.get("/gaps", auth, async (req, res) => {
     ];
 
     const uncoveredStates = allStates.filter(
-      (state) => !statesWithTrainings.includes(state)
+      (state) => !statesWithTrainings.includes(state),
     );
 
     // Low coverage districts
