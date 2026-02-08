@@ -194,11 +194,6 @@ export default function AddTraining() {
     e.preventDefault();
     setError("");
 
-    if (addedParticipants.length === 0) {
-      setError("Please add at least one participant.");
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -318,7 +313,9 @@ export default function AddTraining() {
                         required
                       >
                         <option value="">Select Theme</option>
-                        <option value="Flood Management">Flood Management</option>
+                        <option value="Flood Management">
+                          Flood Management
+                        </option>
                         <option value="Earthquake Safety">
                           Earthquake Safety
                         </option>
@@ -816,9 +813,7 @@ export default function AddTraining() {
                     className={
                       styles["form-btn"] + " " + styles["form-btn-submit"]
                     }
-                    disabled={
-                      loading || uploadingPhotos || !hasAtLeastOneParticipant
-                    }
+                    disabled={loading || uploadingPhotos}
                   >
                     {loading
                       ? "Submitting..."

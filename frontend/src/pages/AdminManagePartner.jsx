@@ -72,6 +72,7 @@ const AdminManagePartner = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
+      approved: { class: styles.statusCompleted, text: "Approved" },
       completed: { class: styles.statusCompleted, text: "Approved" },
       pending: { class: styles.statusPending, text: "Pending" },
       rejected: { class: styles.statusRejected, text: "Rejected" },

@@ -281,11 +281,6 @@ export default function EditTraining() {
     e.preventDefault();
     setError("");
 
-    if (addedParticipants.length === 0) {
-      setError("Please add at least one participant.");
-      return;
-    }
-
     setSubmitting(true);
 
     try {
@@ -978,11 +973,7 @@ export default function EditTraining() {
                     className={
                       styles["form-btn"] + " " + styles["form-btn-submit"]
                     }
-                    disabled={
-                      submitting ||
-                      uploadingFiles ||
-                      addedParticipants.length === 0
-                    }
+                    disabled={submitting || uploadingFiles}
                   >
                     {uploadingFiles
                       ? "Uploading files..."

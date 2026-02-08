@@ -161,5 +161,209 @@
     "partnerId": { "$oid": "000000000000000000000004" },
     "status": "pending",
     "createdAt": "2024-03-01T10:00:00Z"
+  },
+  {
+    "title": "Cyclone Management & Response",
+    "theme": "Cyclone Management",
+    "description": "Training on cyclone management, warning systems, and disaster response protocols.",
+    "startDate": "2024-04-01T10:00:00Z",
+    "endDate": "2024-04-03T17:00:00Z",
+    "location": {
+      "state": "Odisha",
+      "district": "Bhubaneswar",
+      "city": "Bhubaneswar",
+      "latitude": 20.2961,
+      "longitude": 85.8245,
+      "address": "State Disaster Management Institute, Bhubaneswar"
+    },
+    "trainerName": "Mr. Suresh Das",
+    "trainerEmail": "trainer5@ndma.org",
+    "participantsCount": 70,
+    "participantBreakdown": {
+      "government": 28,
+      "ngo": 32,
+      "volunteers": 10
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000001" },
+    "status": "approved",
+    "approvedAt": "2024-03-15T10:00:00Z",
+    "createdAt": "2024-03-10T10:00:00Z"
+  },
+  {
+    "title": "Fire Safety & Prevention",
+    "theme": "Fire Safety",
+    "description": "Comprehensive training on fire safety protocols, prevention measures, and emergency response.",
+    "startDate": "2024-04-05T09:00:00Z",
+    "endDate": "2024-04-07T16:00:00Z",
+    "location": {
+      "state": "Punjab",
+      "district": "Chandigarh",
+      "city": "Chandigarh",
+      "latitude": 30.7333,
+      "longitude": 76.7794,
+      "address": "Fire Department Training Center, Chandigarh"
+    },
+    "trainerName": "Ms. Harpreet Kaur",
+    "trainerEmail": "trainer6@ndma.org",
+    "participantsCount": 55,
+    "participantBreakdown": {
+      "government": 22,
+      "ngo": 20,
+      "volunteers": 13
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000002" },
+    "status": "approved",
+    "approvedAt": "2024-03-20T10:00:00Z",
+    "createdAt": "2024-03-12T10:00:00Z"
+  },
+  {
+    "title": "Advanced Cyclone Preparedness",
+    "theme": "Cyclone Management",
+    "description": "Advanced techniques in cyclone preparedness, community awareness, and mitigation strategies.",
+    "startDate": "2024-04-10T10:00:00Z",
+    "endDate": "2024-04-12T17:00:00Z",
+    "location": {
+      "state": "Andhra Pradesh",
+      "district": "Visakhapatnam",
+      "city": "Visakhapatnam",
+      "latitude": 17.6869,
+      "longitude": 83.2185,
+      "address": "Coastal Disaster Management Center, Visakhapatnam"
+    },
+    "trainerName": "Dr. Ramesh Reddy",
+    "trainerEmail": "trainer7@ndma.org",
+    "participantsCount": 80,
+    "participantBreakdown": {
+      "government": 32,
+      "ngo": 35,
+      "volunteers": 13
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000003" },
+    "status": "approved",
+    "approvedAt": "2024-03-25T10:00:00Z",
+    "createdAt": "2024-03-18T10:00:00Z"
+  },
+  {
+    "title": "Emergency Fire Management",
+    "theme": "Fire Safety",
+    "description": "Specialized training on industrial fire management, hazmat response, and evacuation procedures.",
+    "startDate": "2024-04-15T09:30:00Z",
+    "endDate": "2024-04-17T17:30:00Z",
+    "location": {
+      "state": "Gujarat",
+      "district": "Ahmedabad",
+      "city": "Ahmedabad",
+      "latitude": 23.0225,
+      "longitude": 72.5714,
+      "address": "Industrial Safety Training Institute, Ahmedabad"
+    },
+    "trainerName": "Mr. Anil Joshi",
+    "trainerEmail": "trainer8@ndma.org",
+    "participantsCount": 65,
+    "participantBreakdown": {
+      "government": 25,
+      "ngo": 28,
+      "volunteers": 12
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000004" },
+    "status": "approved",
+    "approvedAt": "2024-03-28T10:00:00Z",
+    "createdAt": "2024-03-20T10:00:00Z"
+  },
+  {
+    "title": "Community Resilience & Earthquake Mitigation",
+    "theme": "Earthquake Safety",
+    "description": "Focus on building community resilience, structural safety, and long-term earthquake mitigation planning.",
+    "startDate": "2024-04-20T09:00:00Z",
+    "endDate": "2024-04-22T17:00:00Z",
+    "location": {
+      "state": "Himachal Pradesh",
+      "district": "Shimla",
+      "city": "Shimla",
+      "latitude": 31.7745,
+      "longitude": 77.1052,
+      "address": "Mountain Disaster Management Training Center, Shimla"
+    },
+    "trainerName": "Dr. Tenzin Dorjee",
+    "trainerEmail": "trainer9@ndma.org",
+    "participantsCount": 50,
+    "participantBreakdown": {
+      "government": 20,
+      "ngo": 18,
+      "volunteers": 12
+    },
+    "photos": [
+      {
+        "filename": "ac.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360101/training/ac.jpg"
+      },
+      {
+        "filename": "ad.jpg",
+        "url": "https://res.cloudinary.com/deav85ezb/image/upload/v1767360102/training/ad.jpg"
+      }
+    ],
+    "attendanceSheet": {
+      "filename": "excell.csv",
+      "url": "https://res.cloudinary.com/deav85ezb/raw/upload/v1767360103/training/excell.csv"
+    },
+    "partnerId": { "$oid": "000000000000000000000001" },
+    "status": "pending",
+    "createdAt": "2024-04-01T10:00:00Z"
   }
 ]

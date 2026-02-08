@@ -66,6 +66,7 @@ const AdminTrainingEvents = () => {
     try {
       setLoading(true);
       const response = await trainingAPI.getAll({ limit: 100 });
+      console.log("API Response - Total trainings returned:", response.data.trainings?.length);
       setTrainings(response.data.trainings || []);
       setFilteredTrainings(response.data.trainings || []);
     } catch (error) {
