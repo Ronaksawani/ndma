@@ -209,6 +209,23 @@
   border-bottom: 2px solid var(--border-color);
 }
 
+.map-recommendation-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.map-panel {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.recommendation-panel {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
 .map-title {
   display: flex;
   align-items: center;
@@ -309,6 +326,27 @@
   font-weight: 500;
 }
 
+.top-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-right: 6px;
+}
+
+.control-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
 .map-container {
   border-radius: 8px;
   overflow: hidden;
@@ -346,6 +384,45 @@
 .map-empty p {
   font-size: 14px;
   color: #6b7280;
+}
+
+.heatmap-popup {
+  min-width: 220px;
+  font-size: 12px;
+}
+
+.heatmap-popup h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.heatmap-popup p {
+  margin: 6px 0;
+}
+
+.heatmap-popup ul {
+  margin: 4px 0 8px 18px;
+  padding: 0;
+}
+
+.heatmap-popup li {
+  margin-bottom: 3px;
+}
+
+.schedule-btn {
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #1d4ed8;
+  cursor: pointer;
+}
+
+.schedule-btn:hover {
+  background: #1e40af;
 }
 
 @media (max-width: 768px) {
@@ -521,5 +598,9 @@
 
   .recommendation-counters {
     justify-content: flex-start;
+  }
+
+  .map-recommendation-layout {
+    grid-template-columns: 1fr;
   }
 }

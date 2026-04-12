@@ -1,15 +1,86 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { FiBarChart2, FiCheck, FiClock, FiFilter, FiMap } from "react-icons/fi";
-import { MapContainer, TileLayer, Popup, CircleMarker } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Popup,
+  Circle,
+  CircleMarker,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI } from "../utils/api";
+import disasterRiskData from "../data/disaster_risk_dataset_india.json";
+import districtCoordsData from "../data/district_coords.json";
 import { generateRecommendations } from "../utils/generateRecommendations";
 import { getColor, getDisasterFromTheme } from "../utils/recommendationEngine";
 import styles from "../styles/Dashboard.module.css";
 
+const DISASTER_OPTIONS = [
+  "Flood",
+  "Cyclone",
+  "Earthquake",
+  "Drought",
+  "Landslide",
+  "Heatwave",
+];
+
+const STATE_ANCHORS = {
+  Assam: [26.2006, 92.9376],
+  Bihar: [25.0961, 85.3131],
+  "Uttar Pradesh": [26.8467, 80.9462],
+  "West Bengal": [22.9868, 87.855],
+  Maharashtra: [19.7515, 75.7139],
+  Kerala: [10.8505, 76.2711],
+  Odisha: [20.9517, 85.0985],
+  "Andhra Pradesh": [15.9129, 79.74],
+  "Tamil Nadu": [11.1271, 78.6569],
+  Gujarat: [22.2587, 71.1924],
+  "Jammu & Kashmir / Ladakh": [34.1526, 77.577],
+  "Himachal Pradesh": [31.1048, 77.1734],
+  Uttarakhand: [30.0668, 79.0193],
+  "North-East": [25.467, 91.3662],
+  "Delhi NCR": [28.6139, 77.209],
+  Rajasthan: [27.0238, 74.2179],
+  Karnataka: [15.3173, 75.7139],
+  Telangana: [18.1124, 79.0193],
+};
+
+const normalizeText = (value = "") =>
+  value
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+const getHeatColor = (riskLevel) => {
+  if (riskLevel === "HIGH") return "#dc2626";
+  if (riskLevel === "MEDIUM") return "#f59e0b";
+  return "#16a34a";
+};
+
+const getMonthDiff = (dateString) => {
+  if (!dateString) return null;
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  return diffMs / (1000 * 60 * 60 * 24 * 30);
+};
+
+const getFallbackPoint = (state, district, index) => {
+  const anchor = STATE_ANCHORS[state] || [22.5937, 78.9629];
+  const hash = normalizeText(`${state}${district}`)
+    .split("")
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const angle = (hash % 360) * (Math.PI / 180);
+  const ring = 0.28 + (index % 4) * 0.18;
+  return [
+    anchor[0] + Math.sin(angle) * ring,
+    anchor[1] + Math.cos(angle) * ring,
+  ];
+};
+
 export default function PartnerDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [stats, setStats] = useState({
     total: 0,
@@ -25,6 +96,9 @@ export default function PartnerDashboard() {
     theme: "all",
     search: "",
   });
+  const [selectedDisaster, setSelectedDisaster] = useState("Earthquake");
+  const [showHeatmap, setShowHeatmap] = useState(true);
+  const [showTrainings, setShowTrainings] = useState(true);
 
   const themes = [
     "Flood Management",
@@ -142,8 +216,189 @@ export default function PartnerDashboard() {
     return matchesStatus && matchesTheme && matchesSearch;
   });
 
+  const mappableLocations = useMemo(
+    () =>
+      filteredTrainings
+        .map((location) => ({
+          ...location,
+          latitude: Number(location.latitude),
+          longitude: Number(location.longitude),
+        }))
+        .filter(
+          (location) =>
+            Number.isFinite(location.latitude) &&
+            Number.isFinite(location.longitude),
+        ),
+    [filteredTrainings],
+  );
+
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const trainingsWithCoords = useMemo(
+    () =>
+      filteredTrainings.filter(
+        (training) =>
+          Number.isFinite(Number(training.location?.latitude)) &&
+          Number.isFinite(Number(training.location?.longitude)),
+      ),
+    [filteredTrainings],
+  );
+
+  const districtCoordinateLookup = useMemo(() => {
+    const map = new Map();
+
+    globalTrainings.forEach((training) => {
+      const district = training.location?.district;
+      const lat = Number(training.location?.latitude);
+      const lng = Number(training.location?.longitude);
+
+      if (!district || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return;
+      }
+
+      const key = normalizeText(district);
+      const existing = map.get(key);
+
+      if (existing) {
+        existing.lat += lat;
+        existing.lng += lng;
+        existing.count += 1;
+      } else {
+        map.set(key, { lat, lng, count: 1 });
+      }
+    });
+
+    return map;
+  }, [globalTrainings]);
+
+  const heatmapZones = useMemo(() => {
+    const zonesByDisaster = disasterRiskData[selectedDisaster] || {};
+    const zones = [];
+
+    Object.entries(zonesByDisaster).forEach(([state, riskBandGroups]) => {
+      const allDistricts = [
+        ...(riskBandGroups.high || []),
+        ...(riskBandGroups.moderate || []),
+      ];
+
+      allDistricts.forEach((district, index) => {
+        const matchingTrainings = globalTrainings.filter((training) => {
+          const trainingDistrict = normalizeText(training.location?.district);
+          const trainingDisaster = getDisasterFromTheme(training.theme);
+          return (
+            trainingDistrict === normalizeText(district) &&
+            trainingDisaster === selectedDisaster
+          );
+        });
+
+        const sortedByDate = [...matchingTrainings].sort(
+          (a, b) => new Date(b.startDate) - new Date(a.startDate),
+        );
+        const lastTraining = sortedByDate[0];
+        const monthsSinceLast = getMonthDiff(lastTraining?.startDate);
+
+        let timeScore = 50;
+        if (monthsSinceLast !== null && monthsSinceLast < 3) {
+          timeScore = 10;
+        } else if (monthsSinceLast !== null && monthsSinceLast <= 6) {
+          timeScore = 30;
+        }
+
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const participantsCovered = matchingTrainings
+          .filter((training) => new Date(training.startDate) >= sixMonthsAgo)
+          .reduce(
+            (sum, training) => sum + (Number(training.participantsCount) || 0),
+            0,
+          );
+
+        let participantScore = 30;
+        if (participantsCovered >= 200) {
+          participantScore = 10;
+        } else if (participantsCovered >= 50) {
+          participantScore = 20;
+        }
+
+        const riskScore = timeScore + participantScore;
+        const riskLevel =
+          riskScore >= 70 ? "HIGH" : riskScore >= 45 ? "MEDIUM" : "LOW";
+
+        // Check verified district coordinates first, then training-based, then fallback
+        let center;
+        const verifiedCoord = districtCoordsData.entries?.find(
+          (entry) =>
+            normalizeText(entry.district) === normalizeText(district) &&
+            normalizeText(entry.state) === normalizeText(state),
+        );
+
+        if (verifiedCoord) {
+          center = [verifiedCoord.latitude, verifiedCoord.longitude];
+        } else {
+          // Fall back to training-based averages
+          const coordinateEntry = districtCoordinateLookup.get(
+            normalizeText(district),
+          );
+          center = coordinateEntry
+            ? [
+                coordinateEntry.lat / coordinateEntry.count,
+                coordinateEntry.lng / coordinateEntry.count,
+              ]
+            : getFallbackPoint(state, district, index);
+        }
+
+        const reasons = [];
+        if (!lastTraining) {
+          reasons.push("No training conducted yet for this disaster.");
+        } else if (monthsSinceLast > 6) {
+          reasons.push(
+            `No training in last ${Math.floor(monthsSinceLast)} months.`,
+          );
+        } else if (monthsSinceLast >= 3) {
+          reasons.push("Training frequency is moderate (3-6 month gap).");
+        } else {
+          reasons.push("Training happened recently (<3 months).");
+        }
+
+        reasons.push(
+          participantsCovered < 50
+            ? `Only ${participantsCovered} participants trained in last 6 months.`
+            : participantsCovered <= 200
+              ? `${participantsCovered} participants trained, coverage is moderate.`
+              : `${participantsCovered} participants trained, coverage is strong.`,
+        );
+
+        if (riskBandGroups.high?.includes(district)) {
+          reasons.push("District is in high baseline hazard category.");
+        } else {
+          reasons.push("District is in moderate baseline hazard category.");
+        }
+
+        zones.push({
+          key: `${selectedDisaster}::${state}::${district}`,
+          state,
+          district,
+          center,
+          riskScore,
+          riskLevel,
+          reasons,
+        });
+      });
+    });
+
+    return zones;
+  }, [districtCoordinateLookup, globalTrainings, selectedDisaster]);
+
+  const heatmapRecommendationText = (zone) => {
+    if (zone.riskLevel === "HIGH") {
+      return `Conduct ${selectedDisaster} training within 2 weeks.`;
+    }
+    if (zone.riskLevel === "MEDIUM") {
+      return `Plan ${selectedDisaster} training within 1 month.`;
+    }
+    return `Maintain periodic ${selectedDisaster} drills every quarter.`;
   };
 
   return (
@@ -221,267 +476,341 @@ export default function PartnerDashboard() {
             </div>
           </div>
 
-          <div className={styles["recommendation-section"]}>
-            <div className={styles["recommendation-header"]}>
-              <div>
-                <p className={styles["section-eyebrow"]}>Priority engine</p>
-                <h3>Recommended focus areas</h3>
-              </div>
-              <div className={styles["recommendation-counters"]}>
-                <span className={styles["priority-chip-high"]}>
-                  High {recommendationCounts.high}
-                </span>
-                <span className={styles["priority-chip-medium"]}>
-                  Medium {recommendationCounts.medium}
-                </span>
-                <span className={styles["priority-chip-low"]}>
-                  Low {recommendationCounts.low}
-                </span>
-              </div>
-            </div>
-
-            <div className={styles["recommendation-grid"]}>
-              {topRecommendations.length > 0 ? (
-                topRecommendations.map((item) => (
-                  <div key={item.key} className={styles["recommendation-card"]}>
-                    <div className={styles["recommendation-card-header"]}>
-                      <div>
-                        <p className={styles["recommendation-location"]}>
-                          {item.district}, {item.state}
-                        </p>
-                        <h4>{item.recommendation}</h4>
-                      </div>
-                      <span
-                        className={`${styles["priority-badge"]} ${styles[`priority${item.priority}`]}`}
-                      >
-                        {item.priority}
-                      </span>
-                    </div>
-                    <p className={styles["recommendation-meta"]}>
-                      {item.disaster} risk • score {item.score.toFixed(1)}
-                    </p>
+          <div className={styles["map-recommendation-layout"]}>
+            {/* Map Section with Filters */}
+            <div className={`card ${styles["map-panel"]}`}>
+              <div className={styles["map-header"]}>
+                <div className={styles["map-title"]}>
+                  <FiMap size={20} style={{ marginRight: "8px" }} />
+                  <h3>Training Locations Map</h3>
+                </div>
+                <div className={styles["map-legend"]}>
+                  <div className={styles["legend-item"]}>
+                    <span
+                      className={styles["legend-dot"]}
+                      style={{ backgroundColor: getColor("High") }}
+                    ></span>
+                    High
                   </div>
-                ))
-              ) : (
-                <div className={styles["recommendation-empty"]}>
-                  No priority recommendations available yet.
+                  <div className={styles["legend-item"]}>
+                    <span
+                      className={styles["legend-dot"]}
+                      style={{ backgroundColor: getColor("Medium") }}
+                    ></span>
+                    Medium
+                  </div>
+                  <div className={styles["legend-item"]}>
+                    <span
+                      className={styles["legend-dot"]}
+                      style={{ backgroundColor: getColor("Low") }}
+                    ></span>
+                    Low
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Map Section with Filters */}
-          <div className="card" style={{ marginBottom: "20px" }}>
-            <div className={styles["map-header"]}>
-              <div className={styles["map-title"]}>
-                <FiMap size={20} style={{ marginRight: "8px" }} />
-                <h3>Training Locations Map</h3>
-              </div>
-              <div className={styles["map-legend"]}>
-                <div className={styles["legend-item"]}>
-                  <span
-                    className={styles["legend-dot"]}
-                    style={{ backgroundColor: getColor("High") }}
-                  ></span>
-                  High
+              {/* Filters */}
+              <div className={styles["map-filters"]}>
+                <div className={styles["top-control-group"]}>
+                  <span className={styles["filter-label"]}>Disaster Type:</span>
+                  <select
+                    value={selectedDisaster}
+                    onChange={(e) => setSelectedDisaster(e.target.value)}
+                    className={styles["filter-select"]}
+                  >
+                    {DISASTER_OPTIONS.map((disaster) => (
+                      <option key={disaster} value={disaster}>
+                        {disaster}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className={styles["legend-item"]}>
-                  <span
-                    className={styles["legend-dot"]}
-                    style={{ backgroundColor: getColor("Medium") }}
-                  ></span>
-                  Medium
-                </div>
-                <div className={styles["legend-item"]}>
-                  <span
-                    className={styles["legend-dot"]}
-                    style={{ backgroundColor: getColor("Low") }}
-                  ></span>
-                  Low
-                </div>
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className={styles["map-filters"]}>
-              <div className={styles["filter-group"]}>
-                <FiFilter size={16} />
-                <span className={styles["filter-label"]}>Filters:</span>
-              </div>
-              <div className={styles["filter-group"]}>
-                <select
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange("status", e.target.value)}
-                  className={styles["filter-select"]}
-                >
-                  <option value="all">All Status</option>
-                  <option value="approved">Approved</option>
-                  <option value="pending">Pending</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-              <div className={styles["filter-group"]}>
-                <select
-                  value={filters.theme}
-                  onChange={(e) => handleFilterChange("theme", e.target.value)}
-                  className={styles["filter-select"]}
-                >
-                  <option value="all">All Themes</option>
-                  {themes.map((theme) => (
-                    <option key={theme} value={theme}>
-                      {theme}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles["filter-group"]}>
-                <input
-                  type="text"
-                  placeholder="Search by title or location..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange("search", e.target.value)}
-                  className={styles["filter-search"]}
-                />
-              </div>
-              <div className={styles["filter-count"]}>
-                Showing {filteredTrainings.length} of {allTrainings.length}{" "}
-                trainings
-              </div>
-            </div>
-
-            {/* Map */}
-            <div className={styles["map-container"]}>
-              {loading ? (
-                <div className={styles["map-loading"]}>
-                  <div className="spinner"></div>
-                  <p>Loading map...</p>
-                </div>
-              ) : filteredTrainings.filter(
-                  (t) => t.location?.latitude && t.location?.longitude,
-                ).length === 0 ? (
-                <div className={styles["map-empty"]}>
-                  <FiMap size={48} />
-                  <p>No trainings with location data</p>
-                </div>
-              ) : (
-                <MapContainer
-                  center={[20.5937, 78.9629]}
-                  zoom={5}
-                  style={{
-                    height: "500px",
-                    width: "100%",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                <label className={styles["control-checkbox"]}>
+                  <input
+                    type="checkbox"
+                    checked={showHeatmap}
+                    onChange={(e) => setShowHeatmap(e.target.checked)}
                   />
-                  {filteredTrainings.map((training) => {
-                    if (
-                      !training.location?.latitude ||
-                      !training.location?.longitude
-                    )
-                      return null;
+                  Show Heatmap
+                </label>
+                <label className={styles["control-checkbox"]}>
+                  <input
+                    type="checkbox"
+                    checked={showTrainings}
+                    onChange={(e) => setShowTrainings(e.target.checked)}
+                  />
+                  Show Trainings
+                </label>
 
-                    const recommendation = getTrainingRecommendation(training);
-                    const priority = recommendation?.priority || "Low";
+                <div className={styles["filter-group"]}>
+                  <FiFilter size={16} />
+                  <span className={styles["filter-label"]}>Filters:</span>
+                </div>
+                <div className={styles["filter-group"]}>
+                  <select
+                    value={filters.status}
+                    onChange={(e) =>
+                      handleFilterChange("status", e.target.value)
+                    }
+                    className={styles["filter-select"]}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <div className={styles["filter-group"]}>
+                  <select
+                    value={filters.theme}
+                    onChange={(e) =>
+                      handleFilterChange("theme", e.target.value)
+                    }
+                    className={styles["filter-select"]}
+                  >
+                    <option value="all">All Themes</option>
+                    {themes.map((theme) => (
+                      <option key={theme} value={theme}>
+                        {theme}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles["filter-group"]}>
+                  <input
+                    type="text"
+                    placeholder="Search by title or location..."
+                    value={filters.search}
+                    onChange={(e) =>
+                      handleFilterChange("search", e.target.value)
+                    }
+                    className={styles["filter-search"]}
+                  />
+                </div>
+                <div className={styles["filter-count"]}>
+                  Showing {filteredTrainings.length} of {allTrainings.length}{" "}
+                  trainings
+                </div>
+              </div>
 
-                    return (
-                      <CircleMarker
-                        key={training._id}
-                        center={[
-                          training.location.latitude,
-                          training.location.longitude,
-                        ]}
-                        radius={8}
-                        pathOptions={{
-                          fillColor: getColor(priority),
-                          color: "#fff",
-                          weight: 2,
-                          opacity: 1,
-                          fillOpacity: 0.85,
-                        }}
-                      >
-                        <Popup>
-                          <div style={{ minWidth: "200px" }}>
-                            <h4
-                              style={{
-                                marginBottom: "8px",
-                                fontSize: "14px",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {training.title}
-                            </h4>
-                            <div
-                              style={{ fontSize: "12px", marginBottom: "4px" }}
-                            >
-                              <strong>Theme:</strong> {training.theme}
-                            </div>
-                            <div
-                              style={{ fontSize: "12px", marginBottom: "4px" }}
-                            >
-                              <strong>Location:</strong>{" "}
-                              {training.location?.city},{" "}
-                              {training.location?.district},{" "}
-                              {training.location?.state}
-                            </div>
-                            <div
-                              style={{ fontSize: "12px", marginBottom: "4px" }}
-                            >
-                              <strong>Date:</strong>{" "}
-                              {new Date(
-                                training.startDate,
-                              ).toLocaleDateString()}
-                            </div>
-                            <div
-                              style={{ fontSize: "12px", marginBottom: "4px" }}
-                            >
-                              <strong>Participants:</strong>{" "}
-                              {training.participantsCount}
-                            </div>
-                            {recommendation && (
-                              <div
-                                style={{
-                                  fontSize: "12px",
-                                  marginBottom: "4px",
-                                }}
-                              >
+              {/* Map */}
+              <div className={styles["map-container"]}>
+                {loading ? (
+                  <div className={styles["map-loading"]}>
+                    <div className="spinner"></div>
+                    <p>Loading map...</p>
+                  </div>
+                ) : !showHeatmap && !showTrainings ? (
+                  <div className={styles["map-empty"]}>
+                    <FiMap size={48} />
+                    <p>Enable Heatmap or Trainings to view map layers</p>
+                  </div>
+                ) : !showHeatmap && trainingsWithCoords.length === 0 ? (
+                  <div className={styles["map-empty"]}>
+                    <FiMap size={48} />
+                    <p>No trainings with location data</p>
+                  </div>
+                ) : (
+                  <MapContainer
+                    center={[20.5937, 78.9629]}
+                    zoom={5}
+                    style={{
+                      height: "500px",
+                      width: "100%",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {showHeatmap &&
+                      heatmapZones.map((zone) => (
+                        <Circle
+                          key={zone.key}
+                          center={zone.center}
+                          radius={20000 + zone.riskScore * 350}
+                          pathOptions={{
+                            color: getHeatColor(zone.riskLevel),
+                            fillColor: getHeatColor(zone.riskLevel),
+                            fillOpacity: 0.26,
+                            weight: 2,
+                          }}
+                        >
+                          <Popup>
+                            <div className={styles["heatmap-popup"]}>
+                              <h4>
+                                {zone.district}, {zone.state}
+                              </h4>
+                              <p>
+                                <strong>Risk Level:</strong> {zone.riskLevel}{" "}
+                                (Score: {zone.riskScore})
+                              </p>
+                              <p>
+                                <strong>Reason:</strong>
+                              </p>
+                              <ul>
+                                {zone.reasons.map((reason) => (
+                                  <li key={reason}>{reason}</li>
+                                ))}
+                              </ul>
+                              <p>
                                 <strong>Recommendation:</strong>{" "}
-                                {recommendation.recommendation}
+                                {heatmapRecommendationText(zone)}
+                              </p>
+                              <button
+                                type="button"
+                                className={styles["schedule-btn"]}
+                                onClick={() =>
+                                  navigate("/partner/add-training")
+                                }
+                              >
+                                Schedule Training
+                              </button>
+                            </div>
+                          </Popup>
+                        </Circle>
+                      ))}
+
+                    {showTrainings &&
+                      trainingsWithCoords.map((training) => {
+                        const recommendation =
+                          getTrainingRecommendation(training);
+                        const priority = recommendation?.priority || "Low";
+
+                        return (
+                          <CircleMarker
+                            key={training._id}
+                            center={[
+                              Number(training.location.latitude),
+                              Number(training.location.longitude),
+                            ]}
+                            radius={8}
+                            pathOptions={{
+                              fillColor: getColor(priority),
+                              color: "#fff",
+                              weight: 2,
+                              opacity: 1,
+                              fillOpacity: 0.95,
+                            }}
+                          >
+                            <Popup>
+                              <div style={{ minWidth: "200px" }}>
+                                <h4
+                                  style={{
+                                    marginBottom: "8px",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                  }}
+                                >
+                                  {training.title}
+                                </h4>
+                                <div
+                                  style={{
+                                    fontSize: "12px",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  <strong>Theme:</strong> {training.theme}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "12px",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  <strong>Location:</strong>{" "}
+                                  {training.location?.city},{" "}
+                                  {training.location?.district},{" "}
+                                  {training.location?.state}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "12px",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  <strong>Date:</strong>{" "}
+                                  {new Date(
+                                    training.startDate,
+                                  ).toLocaleDateString()}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "12px",
+                                    marginBottom: "4px",
+                                  }}
+                                >
+                                  <strong>Participants:</strong>{" "}
+                                  {training.participantsCount}
+                                </div>
                               </div>
-                            )}
-                            <div
-                              style={{ fontSize: "12px", marginBottom: "4px" }}
-                            >
-                              <strong>Priority:</strong>{" "}
-                              <span
-                                className={`${styles["priority-badge"]} ${styles[`priority${priority}`]}`}
-                              >
-                                {priority}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: "12px", marginTop: "8px" }}>
-                              <span
-                                className={`badge badge-${training.status}`}
-                                style={{
-                                  padding: "4px 8px",
-                                  borderRadius: "4px",
-                                  fontSize: "11px",
-                                  fontWeight: "600",
-                                }}
-                              >
-                                {training.status}
-                              </span>
-                            </div>
-                          </div>
-                        </Popup>
-                      </CircleMarker>
-                    );
-                  })}
-                </MapContainer>
-              )}
+                            </Popup>
+                          </CircleMarker>
+                        );
+                      })}
+                  </MapContainer>
+                )}
+                {mappableLocations.length === 0 && (
+                  <div className={styles.noDataOverlay}>
+                    <p>No training locations with coordinates available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div
+              className={`${styles["recommendation-section"]} ${styles["recommendation-panel"]}`}
+            >
+              <div className={styles["recommendation-header"]}>
+                <div>
+                  <p className={styles["section-eyebrow"]}>Priority engine</p>
+                  <h3>Recommended focus areas</h3>
+                </div>
+                <div className={styles["recommendation-counters"]}>
+                  <span className={styles["priority-chip-high"]}>
+                    High {recommendationCounts.high}
+                  </span>
+                  <span className={styles["priority-chip-medium"]}>
+                    Medium {recommendationCounts.medium}
+                  </span>
+                  <span className={styles["priority-chip-low"]}>
+                    Low {recommendationCounts.low}
+                  </span>
+                </div>
+              </div>
+
+              <div className={styles["recommendation-grid"]}>
+                {topRecommendations.length > 0 ? (
+                  topRecommendations.map((item) => (
+                    <div
+                      key={item.key}
+                      className={styles["recommendation-card"]}
+                    >
+                      <div className={styles["recommendation-card-header"]}>
+                        <div>
+                          <p className={styles["recommendation-location"]}>
+                            {item.district}, {item.state}
+                          </p>
+                          <h4>{item.recommendation}</h4>
+                        </div>
+                        <span
+                          className={`${styles["priority-badge"]} ${styles[`priority${item.priority}`]}`}
+                        >
+                          {item.priority}
+                        </span>
+                      </div>
+                      <p className={styles["recommendation-meta"]}>
+                        {item.disaster} risk • score {item.score.toFixed(1)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles["recommendation-empty"]}>
+                    No priority recommendations available yet.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

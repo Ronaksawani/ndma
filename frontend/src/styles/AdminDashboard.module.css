@@ -11,18 +11,47 @@
   flex-direction: column;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
-  padding: 2rem;
+  padding: 0;
   overflow-y: auto;
   margin-left: 200px;
+}
+
+/* Top Bar */
+.topBar {
+  background: #f3f4f6;
+  border-bottom: 1px solid #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 15px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #111827;
+}
+
+.topBarTitle {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Update main content container padding */
+.mainContentWrapper {
+  padding: 2rem;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .loadingState {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 400px;
+  flex: 1;
+  min-height: 100vh;
   color: #666;
   font-size: 1.1rem;
+  text-align: center;
 }
 
 .errorBanner {
@@ -38,13 +67,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 2rem;
 }
 
 .header h1 {
   font-size: 2rem;
   color: #1a1a1a;
-  margin: 0;
   font-weight: 600;
 }
 
@@ -55,11 +82,13 @@
 
 .notificationButton {
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: none;
   background: #ffffff;
+  overflow: visible;
+  padding: 0;
   color: #1f2937;
   display: inline-flex;
   align-items: center;
@@ -122,18 +151,18 @@
 /* Statistics Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.4rem;
 }
 
 .statCard {
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
+  border-radius: 10px;
+  padding: 1rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition:
     transform 0.3s ease,
@@ -146,15 +175,15 @@
 }
 
 .statIcon {
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
 }
 
@@ -163,16 +192,16 @@
 }
 
 .statLabel {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: #888;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.35rem 0;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .statValue {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0;
@@ -181,16 +210,16 @@
 .chart {
   display: flex;
   align-items: flex-end;
-  gap: 0.4rem;
-  height: 40px;
+  gap: 0.3rem;
+  height: 32px;
 }
 
 .barChart {
   display: flex;
   align-items: flex-end;
-  gap: 0.3rem;
-  width: 60px;
-  height: 40px;
+  gap: 0.25rem;
+  width: 50px;
+  height: 32px;
 }
 
 .bar {
@@ -210,6 +239,23 @@
   display: block;
 }
 
+.mapRecommendationLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.mapPanel {
+  min-width: 0;
+  height: auto;
+}
+
+.recommendationPanel {
+  min-width: 0;
+  height: auto;
+}
+
 /* Map Section */
 .mapSection {
   background: white;
@@ -218,10 +264,131 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: auto;
+  position: relative;
+}
+
+.mapHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filterToggleButton {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.14);
+}
+
+.filterToggleButton:hover {
+  transform: translateY(-1px);
+  background: #dbeafe;
+}
+
+.filterDrawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(320px, 88%);
+  height: 100%;
+  background: rgba(255, 255, 255, 0.98);
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: -12px 0 24px rgba(15, 23, 42, 0.12);
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.filterDrawerOpen {
+  transform: translateX(0);
+}
+
+.filterDrawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.filterDrawerHeader h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.filterDrawerCloseButton {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.filterDrawerBody {
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+}
+
+.filterDrawerField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.filterDrawerField label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.filterDrawerField select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.75rem;
+  height: 28px;
+}
+
+.filterDrawerCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.filterDrawerCheckbox input {
+  width: 13px;
+  height: 13px;
 }
 
 .mapHeader {
-  padding: 1.5rem;
+  padding: 0.7rem;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
@@ -503,9 +670,59 @@
   .mapStage {
     min-height: 350px;
   }
+
+  .mapRecommendationLayout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
+  .heatmapPopup {
+    min-width: 220px;
+    font-size: 12px;
+  }
+
+  .heatmapPopup h4 {
+    margin: 0 0 8px;
+    font-size: 14px;
+  }
+
+  .heatmapPopup p {
+    margin: 6px 0;
+  }
+
+  .heatmapPopup ul {
+    margin: 4px 0 8px 18px;
+    padding: 0;
+  }
+
+  .heatmapPopup li {
+    margin-bottom: 3px;
+  }
+
+  .topControlGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .topControlGroup label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-right: 6px;
+    cursor: pointer;
+  }
+
+  .topControlGroup input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+
   .dashboardContainer {
     padding: 1rem;
   }
@@ -546,18 +763,18 @@
   }
 
   .statCard {
-    gap: 1rem;
-    padding: 1rem;
+    gap: 0.85rem;
+    padding: 0.85rem;
   }
 
   .statIcon {
-    width: 50px;
-    height: 50px;
-    font-size: 1.5rem;
+    width: 46px;
+    height: 46px;
+    font-size: 1.3rem;
   }
 
   .statValue {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
 
   .activitiesList {
@@ -575,22 +792,22 @@
   }
 
   .statCard {
-    padding: 0.75rem;
-    gap: 0.75rem;
+    padding: 0.65rem;
+    gap: 0.65rem;
   }
 
   .statIcon {
-    width: 45px;
-    height: 45px;
-    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.05rem;
   }
 
   .statLabel {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 
   .statValue {
-    font-size: 1.3rem;
+    font-size: 1.15rem;
   }
 
   .chart {
@@ -634,8 +851,9 @@
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(102, 126, 234, 0.14);
   border-radius: 12px;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: 1.25rem 1rem;
+  margin-bottom: 0;
+  height: 100%;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
@@ -714,14 +932,17 @@
 .recommendationGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.85rem;
+  gap: 0.5rem;
+  max-height: 450px;
+  overflow: auto;
+  padding-right: 0.25rem;
 }
 
 .recommendationCard {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 0.7rem;
 }
 
 .recommendationCardHeader {
@@ -791,5 +1012,30 @@
 
   .recommendationCounters {
     justify-content: flex-start;
+  }
+
+  .mapHeader {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .mapHeaderActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filterDrawer {
+    width: 100%;
+  }
+
+  .mapPanel,
+  .recommendationPanel {
+    height: auto;
+  }
+
+  .recommendationGrid {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }

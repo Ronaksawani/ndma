@@ -1,11 +1,86 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  Circle,
+} from "react-leaflet";
 import { analyticsAPI, partnerAPI, trainingAPI } from "../utils/api";
 import Sidebar from "../components/Sidebar";
 import { generateRecommendations } from "../utils/generateRecommendations";
 import { getColor, getDisasterFromTheme } from "../utils/recommendationEngine";
 import styles from "../styles/AdminDashboard.module.css";
-import { FiBarChart2, FiUsers, FiMapPin, FiBell } from "react-icons/fi";
+import {
+  FiBarChart2,
+  FiUsers,
+  FiMapPin,
+  FiBell,
+  FiFilter,
+} from "react-icons/fi";
+import disasterRiskData from "../data/disaster_risk_dataset_india.json";
+import districtCoordsData from "../data/district_coords.json";
+
+const DISASTER_OPTIONS = [
+  "Flood",
+  "Cyclone",
+  "Earthquake",
+  "Drought",
+  "Landslide",
+  "Heatwave",
+];
+
+const STATE_ANCHORS = {
+  Assam: [26.2006, 92.9376],
+  Bihar: [25.0961, 85.3131],
+  "Uttar Pradesh": [26.8467, 80.9462],
+  "West Bengal": [22.9868, 87.855],
+  Maharashtra: [19.7515, 75.7139],
+  Kerala: [10.8505, 76.2711],
+  Odisha: [20.9517, 85.0985],
+  "Andhra Pradesh": [15.9129, 79.74],
+  "Tamil Nadu": [11.1271, 78.6569],
+  Gujarat: [22.2587, 71.1924],
+  "Jammu & Kashmir / Ladakh": [34.1526, 77.577],
+  "Himachal Pradesh": [31.1048, 77.1734],
+  Uttarakhand: [30.0668, 79.0193],
+  "North-East": [25.467, 91.3662],
+  "Delhi NCR": [28.6139, 77.209],
+  Rajasthan: [27.0238, 74.2179],
+  Karnataka: [15.3173, 75.7139],
+  Telangana: [18.1124, 79.0193],
+};
+
+const normalizeText = (value = "") =>
+  value
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+const getHeatColor = (riskLevel) => {
+  if (riskLevel === "HIGH") return "#dc2626";
+  if (riskLevel === "MEDIUM") return "#f59e0b";
+  return "#16a34a";
+};
+
+const getMonthDiff = (dateString) => {
+  if (!dateString) return null;
+  const diffMs = Date.now() - new Date(dateString).getTime();
+  return diffMs / (1000 * 60 * 60 * 24 * 30);
+};
+
+const getFallbackPoint = (state, district, index) => {
+  const anchor = STATE_ANCHORS[state] || [22.5937, 78.9629];
+  const hash = normalizeText(`${state}${district}`)
+    .split("")
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const angle = (hash % 360) * (Math.PI / 180);
+  const ring = 0.28 + (index % 4) * 0.18;
+  return [
+    anchor[0] + Math.sin(angle) * ring,
+    anchor[1] + Math.cos(angle) * ring,
+  ];
+};
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -20,6 +95,10 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showActivitiesPanel, setShowActivitiesPanel] = useState(false);
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [selectedDisaster, setSelectedDisaster] = useState("Earthquake");
+  const [showHeatmap, setShowHeatmap] = useState(true);
+  const [showTrainings, setShowTrainings] = useState(true);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -99,6 +178,149 @@ const AdminDashboard = () => {
         ),
     [filteredLocations],
   );
+
+  const districtCoordinateLookup = useMemo(() => {
+    const map = new Map();
+
+    trainingHistory.forEach((training) => {
+      const district = training.location?.district;
+      const lat = Number(training.location?.latitude);
+      const lng = Number(training.location?.longitude);
+
+      if (!district || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return;
+      }
+
+      const key = normalizeText(district);
+      const existing = map.get(key);
+
+      if (existing) {
+        existing.lat += lat;
+        existing.lng += lng;
+        existing.count += 1;
+      } else {
+        map.set(key, { lat, lng, count: 1 });
+      }
+    });
+
+    return map;
+  }, [trainingHistory]);
+
+  const heatmapZones = useMemo(() => {
+    const zonesByDisaster = disasterRiskData[selectedDisaster] || {};
+    const zones = [];
+
+    Object.entries(zonesByDisaster).forEach(([state, riskBandGroups]) => {
+      const allDistricts = [
+        ...(riskBandGroups.high || []),
+        ...(riskBandGroups.moderate || []),
+      ];
+
+      allDistricts.forEach((district, index) => {
+        const matchingTrainings = trainingHistory.filter((training) => {
+          const trainingDistrict = normalizeText(training.location?.district);
+          const trainingDisaster = getDisasterFromTheme(training.theme);
+          return (
+            trainingDistrict === normalizeText(district) &&
+            trainingDisaster === selectedDisaster
+          );
+        });
+
+        const sortedByDate = [...matchingTrainings].sort(
+          (a, b) => new Date(b.startDate) - new Date(a.startDate),
+        );
+        const lastTraining = sortedByDate[0];
+        const monthsSinceLast = getMonthDiff(lastTraining?.startDate);
+
+        let timeScore = 50;
+        if (monthsSinceLast !== null && monthsSinceLast < 3) {
+          timeScore = 10;
+        } else if (monthsSinceLast !== null && monthsSinceLast <= 6) {
+          timeScore = 30;
+        }
+
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const participantsCovered = matchingTrainings
+          .filter((training) => new Date(training.startDate) >= sixMonthsAgo)
+          .reduce(
+            (sum, training) => sum + (Number(training.participantsCount) || 0),
+            0,
+          );
+
+        let participantScore = 30;
+        if (participantsCovered >= 200) {
+          participantScore = 10;
+        } else if (participantsCovered >= 50) {
+          participantScore = 20;
+        }
+
+        const riskScore = timeScore + participantScore;
+        const riskLevel =
+          riskScore >= 70 ? "HIGH" : riskScore >= 45 ? "MEDIUM" : "LOW";
+
+        let center;
+        const verifiedCoord = districtCoordsData.entries?.find(
+          (entry) =>
+            normalizeText(entry.district) === normalizeText(district) &&
+            normalizeText(entry.state) === normalizeText(state),
+        );
+
+        if (verifiedCoord) {
+          center = [verifiedCoord.latitude, verifiedCoord.longitude];
+        } else {
+          const coordinateEntry = districtCoordinateLookup.get(
+            normalizeText(district),
+          );
+          center = coordinateEntry
+            ? [
+                coordinateEntry.lat / coordinateEntry.count,
+                coordinateEntry.lng / coordinateEntry.count,
+              ]
+            : getFallbackPoint(state, district, index);
+        }
+
+        const reasons = [];
+        if (!lastTraining) {
+          reasons.push("No training conducted yet for this disaster.");
+        } else if (monthsSinceLast > 6) {
+          reasons.push(
+            `No training in last ${Math.floor(monthsSinceLast)} months.`,
+          );
+        } else if (monthsSinceLast >= 3) {
+          reasons.push("Training frequency is moderate (3-6 month gap).");
+        } else {
+          reasons.push("Training happened recently (<3 months).");
+        }
+
+        reasons.push(
+          participantsCovered < 50
+            ? `Only ${participantsCovered} participants trained in last 6 months.`
+            : participantsCovered <= 200
+              ? `${participantsCovered} participants trained, coverage is moderate.`
+              : `${participantsCovered} participants trained, coverage is strong.`,
+        );
+
+        if (riskBandGroups.high?.includes(district)) {
+          reasons.push("District is in high baseline hazard category.");
+        } else {
+          reasons.push("District is in moderate baseline hazard category.");
+        }
+
+        zones.push({
+          key: `${selectedDisaster}::${state}::${district}`,
+          state,
+          district,
+          center,
+          riskScore,
+          riskLevel,
+          reasons,
+        });
+      });
+    });
+
+    return zones;
+  }, [districtCoordinateLookup, trainingHistory, selectedDisaster]);
 
   const getLocationRecommendation = (location) => {
     const disaster = getDisasterFromTheme(location.theme);
@@ -229,8 +451,9 @@ const AdminDashboard = () => {
     <div className={styles.adminLayout}>
       <Sidebar role="admin" />
       <div className={styles.dashboardContainer}>
-        <div className={styles.header}>
-          <h1>NDMA Admin Dashboard</h1>
+        {/* Top Bar */}
+        <div className={styles.topBar}>
+          <h2 className={styles.topBarTitle}>NDMA Admin Dashboard</h2>
           <div className={styles.headerActions}>
             <button
               type="button"
@@ -251,296 +474,422 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {error && <div className={styles.errorBanner}>{error}</div>}
+        <div className={styles.mainContentWrapper}>
+          {error && <div className={styles.errorBanner}>{error}</div>}
 
-        <div className={styles.recommendationSection}>
-          <div className={styles.recommendationHeader}>
-            <div>
-              <p className={styles.sectionEyebrow}>Priority engine</p>
-              <h3>Disaster response recommendations</h3>
+          {/* Statistics Cards */}
+          <div className={styles.statsGrid}>
+            <div className={styles.statCard}>
+              <div className={styles.statIcon}>
+                <FiBarChart2 />
+              </div>
+              <div className={styles.statContent}>
+                <p className={styles.statLabel}>Total Trainings</p>
+                <h2 className={styles.statValue}>{stats.totalTrainings}</h2>
+              </div>
+              <div className={styles.chart}>
+                <div className={styles.barChart}>
+                  <div className={styles.bar} style={{ height: "40%" }}></div>
+                  <div className={styles.bar} style={{ height: "60%" }}></div>
+                  <div className={styles.bar} style={{ height: "80%" }}></div>
+                  <div className={styles.bar} style={{ height: "50%" }}></div>
+                </div>
+              </div>
             </div>
-            <div className={styles.recommendationCounters}>
-              <span className={styles.priorityChipHigh}>
-                High {recommendationCounts.high}
-              </span>
-              <span className={styles.priorityChipMedium}>
-                Medium {recommendationCounts.medium}
-              </span>
-              <span className={styles.priorityChipLow}>
-                Low {recommendationCounts.low}
-              </span>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIcon}>
+                <FiUsers />
+              </div>
+              <div className={styles.statContent}>
+                <p className={styles.statLabel}>Volunteer Trained</p>
+                <h2 className={styles.statValue}>
+                  {(stats.totalParticipants / 1000).toFixed(1)}K+
+                </h2>
+              </div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statIcon}>
+                <FiMapPin />
+              </div>
+              <div className={styles.statContent}>
+                <p className={styles.statLabel}>States Covered</p>
+                <h2 className={styles.statValue}>{stats.statesCovered}</h2>
+              </div>
             </div>
           </div>
 
-          <div className={styles.recommendationGrid}>
-            {priorityRecommendations.length > 0 ? (
-              priorityRecommendations.map((item) => (
-                <div key={item.key} className={styles.recommendationCard}>
-                  <div className={styles.recommendationCardHeader}>
-                    <div>
-                      <p className={styles.recommendationLocation}>
-                        {item.district}, {item.state}
-                      </p>
-                      <h4>{item.recommendation}</h4>
+          {/* Main Content */}
+          <div className={styles.mainContent}>
+            <div className={styles.mapRecommendationLayout}>
+              {/* Map Section */}
+              <div className={styles.mapSection}>
+                <div className={styles.mapHeader}>
+                  <h3>Training Locations</h3>
+                  <div className={styles.mapHeaderActions}>
+                    <div className={styles.legend}>
+                      <div className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.high}`}
+                        ></span>
+                        <span>High</span>
+                      </div>
+                      <div className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.medium}`}
+                        ></span>
+                        <span>Medium</span>
+                      </div>
+                      <div className={styles.legendItem}>
+                        <span
+                          className={`${styles.legendDot} ${styles.low}`}
+                        ></span>
+                        <span>Low</span>
+                      </div>
                     </div>
-                    <span
-                      className={`${styles.priorityBadge} ${styles[`priority${item.priority}`]}`}
+                    <button
+                      type="button"
+                      className={styles.filterToggleButton}
+                      onClick={() => setShowFilterDrawer((prev) => !prev)}
+                      aria-expanded={showFilterDrawer}
+                      aria-label="Toggle filters"
                     >
-                      {item.priority}
+                      <FiFilter />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.mapStage}>
+                  <MapContainer
+                    center={[20.5937, 78.9629]}
+                    zoom={4}
+                    className={styles.mapContainer}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution="&copy; OpenStreetMap contributors"
+                    />
+                    {showHeatmap &&
+                      heatmapZones.map((zone) => (
+                        <Circle
+                          key={zone.key}
+                          center={zone.center}
+                          radius={zone.riskScore * 500}
+                          pathOptions={{
+                            fillColor: getHeatColor(zone.riskLevel),
+                            color: getHeatColor(zone.riskLevel),
+                            weight: 2,
+                            opacity: 0.7,
+                            fillOpacity: 0.4,
+                          }}
+                        >
+                          <Popup>
+                            <div className={styles.heatmapPopup}>
+                              <h4>
+                                {zone.district}, {zone.state}
+                              </h4>
+                              <p>
+                                <strong>Risk Level:</strong>{" "}
+                                <span
+                                  style={{
+                                    color: getHeatColor(zone.riskLevel),
+                                  }}
+                                >
+                                  {zone.riskLevel}
+                                </span>{" "}
+                                ({zone.riskScore})
+                              </p>
+                              <p>
+                                <strong>Reasons:</strong>
+                              </p>
+                              <ul>
+                                {zone.reasons.map((reason, idx) => (
+                                  <li key={idx}>{reason}</li>
+                                ))}
+                              </ul>
+                              <p>
+                                <strong>Recommendation:</strong>{" "}
+                                {zone.riskLevel === "HIGH"
+                                  ? `Conduct ${selectedDisaster} training within 2 weeks.`
+                                  : zone.riskLevel === "MEDIUM"
+                                    ? `Plan ${selectedDisaster} training within 1 month.`
+                                    : `Maintain periodic ${selectedDisaster} drills every quarter.`}
+                              </p>
+                            </div>
+                          </Popup>
+                        </Circle>
+                      ))}
+                    {showTrainings &&
+                      mappableLocations.map((location) => {
+                        const recommendation =
+                          getLocationRecommendation(location);
+                        const priority = recommendation?.priority || "Low";
+
+                        return (
+                          <CircleMarker
+                            key={location.id}
+                            center={[location.latitude, location.longitude]}
+                            radius={9}
+                            pathOptions={{
+                              fillColor: getColor(priority),
+                              color: "#ffffff",
+                              weight: 2,
+                              opacity: 1,
+                              fillOpacity: 0.85,
+                            }}
+                          >
+                            <Popup>
+                              <div className={styles.popupContent}>
+                                <h4>{location.title}</h4>
+                                <p>
+                                  <strong>Location:</strong> {location.city},{" "}
+                                  {location.state}
+                                </p>
+                                <p>
+                                  <strong>Partner:</strong>{" "}
+                                  {location.partnerName}
+                                </p>
+                                <p>
+                                  <strong>Date:</strong>{" "}
+                                  {new Date(
+                                    location.startDate,
+                                  ).toLocaleDateString()}
+                                </p>
+                                {recommendation && (
+                                  <p>
+                                    <strong>Recommendation:</strong>{" "}
+                                    {recommendation.recommendation}
+                                  </p>
+                                )}
+                              </div>
+                            </Popup>
+                          </CircleMarker>
+                        );
+                      })}
+                  </MapContainer>
+
+                  {mappableLocations.length === 0 && (
+                    <div className={styles.noDataOverlay}>
+                      <p>No training locations with coordinates available</p>
+                    </div>
+                  )}
+                </div>
+
+                <aside
+                  className={`${styles.filterDrawer} ${showFilterDrawer ? styles.filterDrawerOpen : ""}`}
+                  aria-hidden={!showFilterDrawer}
+                >
+                  <div className={styles.filterDrawerHeader}>
+                    <h4>Filters</h4>
+                    <button
+                      type="button"
+                      className={styles.filterDrawerCloseButton}
+                      onClick={() => setShowFilterDrawer(false)}
+                      aria-label="Close filters"
+                    >
+                      x
+                    </button>
+                  </div>
+
+                  <div className={styles.filterDrawerBody}>
+                    <div className={styles.filterDrawerField}>
+                      <label>Status</label>
+                      <select
+                        value={filters.status}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            status: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="all">All Status</option>
+                        <option value="approved">Approved</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+
+                    <div className={styles.filterDrawerField}>
+                      <label>State</label>
+                      <select
+                        value={filters.state}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            state: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="all">All States</option>
+                        {[
+                          ...new Set(
+                            trainingLocations
+                              .map((loc) => loc.state)
+                              .filter(Boolean),
+                          ),
+                        ].map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.filterDrawerField}>
+                      <label>Disaster Type</label>
+                      <select
+                        value={selectedDisaster}
+                        onChange={(e) => setSelectedDisaster(e.target.value)}
+                      >
+                        {DISASTER_OPTIONS.map((disaster) => (
+                          <option key={disaster} value={disaster}>
+                            {disaster}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.filterDrawerField}>
+                      <label>Theme</label>
+                      <select
+                        value={filters.theme}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            theme: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="all">All Themes</option>
+                        {themes.map((theme) => (
+                          <option key={theme} value={theme}>
+                            {theme}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.filterDrawerField}>
+                      <label className={styles.filterDrawerCheckbox}>
+                        <input
+                          type="checkbox"
+                          checked={showHeatmap}
+                          onChange={(e) => setShowHeatmap(e.target.checked)}
+                        />
+                        Show Heatmap
+                      </label>
+                      <label className={styles.filterDrawerCheckbox}>
+                        <input
+                          type="checkbox"
+                          checked={showTrainings}
+                          onChange={(e) => setShowTrainings(e.target.checked)}
+                        />
+                        Show Trainings
+                      </label>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+
+              <div className={styles.recommendationSection}>
+                <div className={styles.recommendationHeader}>
+                  <div>
+                    <p className={styles.sectionEyebrow}>Priority engine</p>
+                    <h3>Disaster response recommendations</h3>
+                  </div>
+                  <div className={styles.recommendationCounters}>
+                    <span className={styles.priorityChipHigh}>
+                      High {recommendationCounts.high}
+                    </span>
+                    <span className={styles.priorityChipMedium}>
+                      Medium {recommendationCounts.medium}
+                    </span>
+                    <span className={styles.priorityChipLow}>
+                      Low {recommendationCounts.low}
                     </span>
                   </div>
-                  <p className={styles.recommendationMeta}>
-                    {item.disaster} risk • score {item.score.toFixed(1)}
-                  </p>
                 </div>
-              ))
-            ) : (
-              <div className={styles.recommendationEmpty}>
-                No high-priority recommendations yet.
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Statistics Cards */}
-        <div className={styles.statsGrid}>
-          <div className={styles.statCard}>
-            <div className={styles.statIcon}>
-              <FiBarChart2 />
-            </div>
-            <div className={styles.statContent}>
-              <p className={styles.statLabel}>Total Trainings</p>
-              <h2 className={styles.statValue}>{stats.totalTrainings}</h2>
-            </div>
-            <div className={styles.chart}>
-              <div className={styles.barChart}>
-                <div className={styles.bar} style={{ height: "40%" }}></div>
-                <div className={styles.bar} style={{ height: "60%" }}></div>
-                <div className={styles.bar} style={{ height: "80%" }}></div>
-                <div className={styles.bar} style={{ height: "50%" }}></div>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.statCard}>
-            <div className={styles.statIcon}>
-              <FiUsers />
-            </div>
-            <div className={styles.statContent}>
-              <p className={styles.statLabel}>Volunteer Trained</p>
-              <h2 className={styles.statValue}>
-                {(stats.totalParticipants / 1000).toFixed(1)}K+
-              </h2>
-            </div>
-          </div>
-
-          <div className={styles.statCard}>
-            <div className={styles.statIcon}>
-              <FiMapPin />
-            </div>
-            <div className={styles.statContent}>
-              <p className={styles.statLabel}>States Covered</p>
-              <h2 className={styles.statValue}>{stats.statesCovered}</h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className={styles.mainContent}>
-          {/* Map Section */}
-          <div className={styles.mapSection}>
-            <div className={styles.mapHeader}>
-              <h3>Training Locations</h3>
-              <div className={styles.legend}>
-                <div className={styles.legendItem}>
-                  <span className={`${styles.legendDot} ${styles.high}`}></span>
-                  <span>High</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <span
-                    className={`${styles.legendDot} ${styles.medium}`}
-                  ></span>
-                  <span>Medium</span>
-                </div>
-                <div className={styles.legendItem}>
-                  <span className={`${styles.legendDot} ${styles.low}`}></span>
-                  <span>Low</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Map Filters */}
-            <div className={styles.mapFilters}>
-              <div className={styles.filterGroup}>
-                <label>Status:</label>
-                <select
-                  value={filters.status}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, status: e.target.value }))
-                  }
-                >
-                  <option value="all">All Status</option>
-                  <option value="approved">Approved</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-
-              <div className={styles.filterGroup}>
-                <label>State:</label>
-                <select
-                  value={filters.state}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, state: e.target.value }))
-                  }
-                >
-                  <option value="all">All States</option>
-                  {[
-                    ...new Set(
-                      trainingLocations.map((loc) => loc.state).filter(Boolean),
-                    ),
-                  ].map((state) => (
-                    <option key={state} value={state}>
-                      {state}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={styles.filterGroup}>
-                <label>Theme:</label>
-                <select
-                  value={filters.theme}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, theme: e.target.value }))
-                  }
-                >
-                  <option value="all">All Themes</option>
-                  {themes.map((theme) => (
-                    <option key={theme} value={theme}>
-                      {theme}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className={styles.mapStage}>
-              <MapContainer
-                center={[20.5937, 78.9629]}
-                zoom={4}
-                className={styles.mapContainer}
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="&copy; OpenStreetMap contributors"
-                />
-                {mappableLocations.map((location) => {
-                  const recommendation = getLocationRecommendation(location);
-                  const priority = recommendation?.priority || "Low";
-
-                  return (
-                    <CircleMarker
-                      key={location.id}
-                      center={[location.latitude, location.longitude]}
-                      radius={9}
-                      pathOptions={{
-                        fillColor: getColor(priority),
-                        color: "#ffffff",
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.85,
-                      }}
-                    >
-                      <Popup>
-                        <div className={styles.popupContent}>
-                          <h4>{location.title}</h4>
-                          <p>
-                            <strong>Location:</strong> {location.city},{" "}
-                            {location.state}
-                          </p>
-                          <p>
-                            <strong>Partner:</strong> {location.partnerName}
-                          </p>
-                          <p>
-                            <strong>Date:</strong>{" "}
-                            {new Date(location.startDate).toLocaleDateString()}
-                          </p>
-                          <p>
-                            <strong>Priority:</strong>{" "}
-                            <span
-                              className={`${styles.priorityBadge} ${styles[`priority${priority}`]}`}
-                            >
-                              {priority}
-                            </span>
-                          </p>
-                          {recommendation && (
-                            <p>
-                              <strong>Recommendation:</strong>{" "}
-                              {recommendation.recommendation}
+                <div className={styles.recommendationGrid}>
+                  {priorityRecommendations.length > 0 ? (
+                    priorityRecommendations.map((item) => (
+                      <div key={item.key} className={styles.recommendationCard}>
+                        <div className={styles.recommendationCardHeader}>
+                          <div>
+                            <p className={styles.recommendationLocation}>
+                              {item.district}, {item.state}
                             </p>
-                          )}
+                            <h4>{item.recommendation}</h4>
+                          </div>
+                          <span
+                            className={`${styles.priorityBadge} ${styles[`priority${item.priority}`]}`}
+                          >
+                            {item.priority}
+                          </span>
                         </div>
-                      </Popup>
-                    </CircleMarker>
-                  );
-                })}
-              </MapContainer>
-
-              {mappableLocations.length === 0 && (
-                <div className={styles.noDataOverlay}>
-                  <p>No training locations with coordinates available</p>
+                        <p className={styles.recommendationMeta}>
+                          {item.disaster} risk • score {item.score.toFixed(1)}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={styles.recommendationEmpty}>
+                      No high-priority recommendations yet.
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {showActivitiesPanel && (
-          <button
-            type="button"
-            className={styles.panelBackdrop}
-            aria-label="Close recent activities"
-            onClick={() => setShowActivitiesPanel(false)}
-          />
-        )}
-
-        <aside
-          className={`${styles.activitiesDrawer} ${showActivitiesPanel ? styles.activitiesDrawerOpen : ""}`}
-          aria-hidden={!showActivitiesPanel}
-        >
-          <div className={styles.activitiesHeader}>
-            <h3>
-              <FiBell /> Recent Activities
-            </h3>
+          {showActivitiesPanel && (
             <button
               type="button"
-              className={styles.closeDrawerButton}
+              className={styles.panelBackdrop}
+              aria-label="Close recent activities"
               onClick={() => setShowActivitiesPanel(false)}
-              aria-label="Close panel"
-            >
-              x
-            </button>
-          </div>
+            />
+          )}
 
-          <div className={styles.activitiesList}>
-            {recentActivities.length > 0 ? (
-              recentActivities.map((activity) => (
-                <div key={activity.id} className={styles.activityItem}>
-                  <div className={styles.activityDot}></div>
-                  <div className={styles.activityContent}>
-                    <p className={styles.activityTitle}>{activity.title}</p>
-                    <p className={styles.activityMeta}>{activity.partner}</p>
+          <aside
+            className={`${styles.activitiesDrawer} ${showActivitiesPanel ? styles.activitiesDrawerOpen : ""}`}
+            aria-hidden={!showActivitiesPanel}
+          >
+            <div className={styles.activitiesHeader}>
+              <h3>
+                <FiBell /> Recent Activities
+              </h3>
+              <button
+                type="button"
+                className={styles.closeDrawerButton}
+                onClick={() => setShowActivitiesPanel(false)}
+                aria-label="Close panel"
+              >
+                x
+              </button>
+            </div>
+
+            <div className={styles.activitiesList}>
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity) => (
+                  <div key={activity.id} className={styles.activityItem}>
+                    <div className={styles.activityDot}></div>
+                    <div className={styles.activityContent}>
+                      <p className={styles.activityTitle}>{activity.title}</p>
+                      <p className={styles.activityMeta}>{activity.partner}</p>
+                    </div>
+                    <p className={styles.activityTime}>
+                      {getTimeAgo(activity.timestamp)}
+                    </p>
                   </div>
-                  <p className={styles.activityTime}>
-                    {getTimeAgo(activity.timestamp)}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className={styles.noActivities}>No recent activities</p>
-            )}
-          </div>
-        </aside>
+                ))
+              ) : (
+                <p className={styles.noActivities}>No recent activities</p>
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );
