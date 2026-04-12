@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FiBarChart2,
   FiPlus,
@@ -25,6 +25,7 @@ const IconMap = {
 
 export default function Sidebar({ role }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
 
   const handleLogout = () => {
@@ -41,13 +42,52 @@ export default function Sidebar({ role }) {
   ];
 
   const adminLinks = [
-    { icon: "📊", label: "Dashboard", href: "/admin/dashboard" },
-    { icon: "📋", label: "Training Events", href: "/admin/training-events" },
-    { icon: "🤝", label: "Partners", href: "/admin/partners" },
-    { icon: "📈", label: "Reports", href: "/admin/reports" },
+    {
+      icon: "📊",
+      label: "Dashboard",
+      href: "/admin/dashboard",
+      match: ["/admin/dashboard"],
+    },
+    {
+      icon: "📋",
+      label: "Training Events",
+      href: "/admin/training-events",
+      match: ["/admin/training-events", "/admin/training/"],
+    },
+    {
+      icon: "🤝",
+      label: "Partners",
+      href: "/admin/partners",
+      match: ["/admin/partners", "/admin/partner/", "/admin/add-partner"],
+    },
+    {
+      icon: "📈",
+      label: "Reports",
+      href: "/admin/reports",
+      match: ["/admin/reports"],
+    },
   ];
 
-  const links = role === "admin" ? adminLinks : partnerLinks;
+  const partnerLinksWithMatch = partnerLinks.map((link) => ({
+    ...link,
+    match:
+      link.href === "/partner/my-trainings"
+        ? [
+            "/partner/my-trainings",
+            "/partner/edit-training/",
+            "/partner/view-training/",
+          ]
+        : [link.href],
+  }));
+
+  const links = role === "admin" ? adminLinks : partnerLinksWithMatch;
+
+  const isActiveLink = (link) => {
+    return link.match.some(
+      (path) =>
+        location.pathname === path || location.pathname.startsWith(path),
+    );
+  };
 
   return (
     <aside className="sidebar">
@@ -60,12 +100,16 @@ export default function Sidebar({ role }) {
       <ul className="sidebar-menu">
         {links.map((link, idx) => (
           <li key={idx}>
-            <a href={link.href}>
+            <Link
+              to={link.href}
+              className={isActiveLink(link) ? "active" : ""}
+              aria-current={isActiveLink(link) ? "page" : undefined}
+            >
               <span className="sidebar-icon">
                 {IconMap[link.icon] || link.icon}
               </span>
               <span>{link.label}</span>
-            </a>
+            </Link>
           </li>
         ))}
         <li

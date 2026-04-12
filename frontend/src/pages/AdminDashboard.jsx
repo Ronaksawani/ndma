@@ -1,44 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import L from "leaflet";
-import { analyticsAPI, partnerAPI } from "../utils/api";
+import React, { useEffect, useMemo, useState } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { analyticsAPI, partnerAPI, trainingAPI } from "../utils/api";
 import Sidebar from "../components/Sidebar";
+import { generateRecommendations } from "../utils/generateRecommendations";
+import { getColor, getDisasterFromTheme } from "../utils/recommendationEngine";
 import styles from "../styles/AdminDashboard.module.css";
 import { FiBarChart2, FiUsers, FiMapPin, FiBell } from "react-icons/fi";
-
-// Fix for Leaflet markers
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
-
-// Custom marker icons
-const pendingIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const completedIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -48,9 +15,11 @@ const AdminDashboard = () => {
   });
   const [recentActivities, setRecentActivities] = useState([]);
   const [trainingLocations, setTrainingLocations] = useState([]);
+  const [trainingHistory, setTrainingHistory] = useState([]);
   const [filteredLocations, setFilteredLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showActivitiesPanel, setShowActivitiesPanel] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -68,6 +37,80 @@ const AdminDashboard = () => {
     "Landslide Management",
     "Tsunami Awareness",
   ];
+
+  const recommendationInputs = useMemo(
+    () =>
+      trainingHistory
+        .map((training) => ({
+          district: training.location?.district,
+          disaster: getDisasterFromTheme(training.theme),
+          date: training.startDate,
+        }))
+        .filter((training) => training.district && training.disaster),
+    [trainingHistory],
+  );
+
+  const recommendations = useMemo(
+    () => generateRecommendations(recommendationInputs),
+    [recommendationInputs],
+  );
+
+  const recommendationLookup = useMemo(() => {
+    const lookup = new Map();
+
+    recommendations.forEach((item) => {
+      lookup.set(item.key, item);
+    });
+
+    return lookup;
+  }, [recommendations]);
+
+  const priorityRecommendations = useMemo(
+    () =>
+      recommendations
+        .filter((item) => item.priority !== "Low")
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 6),
+    [recommendations],
+  );
+
+  const recommendationCounts = useMemo(
+    () => ({
+      high: recommendations.filter((item) => item.priority === "High").length,
+      medium: recommendations.filter((item) => item.priority === "Medium")
+        .length,
+      low: recommendations.filter((item) => item.priority === "Low").length,
+    }),
+    [recommendations],
+  );
+
+  const mappableLocations = useMemo(
+    () =>
+      filteredLocations
+        .map((location) => ({
+          ...location,
+          latitude: Number(location.latitude),
+          longitude: Number(location.longitude),
+        }))
+        .filter(
+          (location) =>
+            Number.isFinite(location.latitude) &&
+            Number.isFinite(location.longitude),
+        ),
+    [filteredLocations],
+  );
+
+  const getLocationRecommendation = (location) => {
+    const disaster = getDisasterFromTheme(location.theme);
+
+    if (!disaster) {
+      return null;
+    }
+
+    return recommendationLookup.get(
+      [location.state || "", location.district || "", disaster].join("::"),
+    );
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -100,13 +143,19 @@ const AdminDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch dashboard statistics
-      const dashboardRes = await analyticsAPI.getDashboard();
+      const [dashboardRes, locationsRes, trainingsRes] = await Promise.all([
+        analyticsAPI.getDashboard(),
+        analyticsAPI.getTrainingLocations(),
+        trainingAPI.getAll({ limit: 1000 }),
+      ]);
+
       setStats({
         totalTrainings: dashboardRes.data.stats.totalTrainings,
         totalParticipants: dashboardRes.data.stats.totalParticipants,
         statesCovered: dashboardRes.data.stats.statesCovered,
       });
+      setTrainingHistory(trainingsRes.data.trainings || []);
+      setTrainingLocations(locationsRes.data || []);
 
       // Combine training activities with pending partner requests
       const activities = dashboardRes.data.recentActivities.map((training) => ({
@@ -140,10 +189,6 @@ const AdminDashboard = () => {
         console.error("Error fetching pending partners:", err);
         setRecentActivities(activities);
       }
-
-      // Fetch training locations for map
-      const locationsRes = await analyticsAPI.getTrainingLocations();
-      setTrainingLocations(locationsRes.data);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError("Failed to load dashboard data");
@@ -186,9 +231,76 @@ const AdminDashboard = () => {
       <div className={styles.dashboardContainer}>
         <div className={styles.header}>
           <h1>NDMA Admin Dashboard</h1>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.notificationButton}
+              title="Recent activities"
+              onClick={() => setShowActivitiesPanel((prev) => !prev)}
+            >
+              <FiBell />
+              {recentActivities.length > 0 && (
+                <span className={styles.notificationCount}>
+                  {Math.min(recentActivities.length, 9)}
+                </span>
+              )}
+              <span className={styles.notificationTooltip}>
+                Recent Activities
+              </span>
+            </button>
+          </div>
         </div>
 
         {error && <div className={styles.errorBanner}>{error}</div>}
+
+        <div className={styles.recommendationSection}>
+          <div className={styles.recommendationHeader}>
+            <div>
+              <p className={styles.sectionEyebrow}>Priority engine</p>
+              <h3>Disaster response recommendations</h3>
+            </div>
+            <div className={styles.recommendationCounters}>
+              <span className={styles.priorityChipHigh}>
+                High {recommendationCounts.high}
+              </span>
+              <span className={styles.priorityChipMedium}>
+                Medium {recommendationCounts.medium}
+              </span>
+              <span className={styles.priorityChipLow}>
+                Low {recommendationCounts.low}
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.recommendationGrid}>
+            {priorityRecommendations.length > 0 ? (
+              priorityRecommendations.map((item) => (
+                <div key={item.key} className={styles.recommendationCard}>
+                  <div className={styles.recommendationCardHeader}>
+                    <div>
+                      <p className={styles.recommendationLocation}>
+                        {item.district}, {item.state}
+                      </p>
+                      <h4>{item.recommendation}</h4>
+                    </div>
+                    <span
+                      className={`${styles.priorityBadge} ${styles[`priority${item.priority}`]}`}
+                    >
+                      {item.priority}
+                    </span>
+                  </div>
+                  <p className={styles.recommendationMeta}>
+                    {item.disaster} risk • score {item.score.toFixed(1)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className={styles.recommendationEmpty}>
+                No high-priority recommendations yet.
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Statistics Cards */}
         <div className={styles.statsGrid}>
@@ -241,16 +353,18 @@ const AdminDashboard = () => {
               <h3>Training Locations</h3>
               <div className={styles.legend}>
                 <div className={styles.legendItem}>
-                  <span
-                    className={`${styles.legendDot} ${styles.pending}`}
-                  ></span>
-                  <span>Pending</span>
+                  <span className={`${styles.legendDot} ${styles.high}`}></span>
+                  <span>High</span>
                 </div>
                 <div className={styles.legendItem}>
                   <span
-                    className={`${styles.legendDot} ${styles.completed}`}
+                    className={`${styles.legendDot} ${styles.medium}`}
                   ></span>
-                  <span>Completed</span>
+                  <span>Medium</span>
+                </div>
+                <div className={styles.legendItem}>
+                  <span className={`${styles.legendDot} ${styles.low}`}></span>
+                  <span>Low</span>
                 </div>
               </div>
             </div>
@@ -310,7 +424,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {filteredLocations.length > 0 ? (
+            <div className={styles.mapStage}>
               <MapContainer
                 center={[20.5937, 78.9629]}
                 zoom={4}
@@ -320,70 +434,113 @@ const AdminDashboard = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution="&copy; OpenStreetMap contributors"
                 />
-                {filteredLocations.map((location) => (
-                  <Marker
-                    key={location.id}
-                    position={[location.latitude, location.longitude]}
-                    icon={
-                      location.status === "approved"
-                        ? completedIcon
-                        : pendingIcon
-                    }
-                  >
-                    <Popup>
-                      <div className={styles.popupContent}>
-                        <h4>{location.title}</h4>
-                        <p>
-                          <strong>Location:</strong> {location.city},{" "}
-                          {location.state}
-                        </p>
-                        <p>
-                          <strong>Partner:</strong> {location.partnerName}
-                        </p>
-                        <p>
-                          <strong>Date:</strong>{" "}
-                          {new Date(location.startDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
+                {mappableLocations.map((location) => {
+                  const recommendation = getLocationRecommendation(location);
+                  const priority = recommendation?.priority || "Low";
+
+                  return (
+                    <CircleMarker
+                      key={location.id}
+                      center={[location.latitude, location.longitude]}
+                      radius={9}
+                      pathOptions={{
+                        fillColor: getColor(priority),
+                        color: "#ffffff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.85,
+                      }}
+                    >
+                      <Popup>
+                        <div className={styles.popupContent}>
+                          <h4>{location.title}</h4>
+                          <p>
+                            <strong>Location:</strong> {location.city},{" "}
+                            {location.state}
+                          </p>
+                          <p>
+                            <strong>Partner:</strong> {location.partnerName}
+                          </p>
+                          <p>
+                            <strong>Date:</strong>{" "}
+                            {new Date(location.startDate).toLocaleDateString()}
+                          </p>
+                          <p>
+                            <strong>Priority:</strong>{" "}
+                            <span
+                              className={`${styles.priorityBadge} ${styles[`priority${priority}`]}`}
+                            >
+                              {priority}
+                            </span>
+                          </p>
+                          {recommendation && (
+                            <p>
+                              <strong>Recommendation:</strong>{" "}
+                              {recommendation.recommendation}
+                            </p>
+                          )}
+                        </div>
+                      </Popup>
+                    </CircleMarker>
+                  );
+                })}
               </MapContainer>
-            ) : (
-              <div className={styles.noDataMessage}>
-                <p>No training locations available</p>
-              </div>
-            )}
-          </div>
 
-          {/* Recent Activities Section */}
-          <div className={styles.activitiesSection}>
-            <div className={styles.activitiesHeader}>
-              <h3>
-                <FiBell /> Recent Activities
-              </h3>
-            </div>
-
-            <div className={styles.activitiesList}>
-              {recentActivities.length > 0 ? (
-                recentActivities.map((activity) => (
-                  <div key={activity.id} className={styles.activityItem}>
-                    <div className={styles.activityDot}></div>
-                    <div className={styles.activityContent}>
-                      <p className={styles.activityTitle}>{activity.title}</p>
-                      <p className={styles.activityMeta}>{activity.partner}</p>
-                    </div>
-                    <p className={styles.activityTime}>
-                      {getTimeAgo(activity.timestamp)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className={styles.noActivities}>No recent activities</p>
+              {mappableLocations.length === 0 && (
+                <div className={styles.noDataOverlay}>
+                  <p>No training locations with coordinates available</p>
+                </div>
               )}
             </div>
           </div>
         </div>
+
+        {showActivitiesPanel && (
+          <button
+            type="button"
+            className={styles.panelBackdrop}
+            aria-label="Close recent activities"
+            onClick={() => setShowActivitiesPanel(false)}
+          />
+        )}
+
+        <aside
+          className={`${styles.activitiesDrawer} ${showActivitiesPanel ? styles.activitiesDrawerOpen : ""}`}
+          aria-hidden={!showActivitiesPanel}
+        >
+          <div className={styles.activitiesHeader}>
+            <h3>
+              <FiBell /> Recent Activities
+            </h3>
+            <button
+              type="button"
+              className={styles.closeDrawerButton}
+              onClick={() => setShowActivitiesPanel(false)}
+              aria-label="Close panel"
+            >
+              x
+            </button>
+          </div>
+
+          <div className={styles.activitiesList}>
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity) => (
+                <div key={activity.id} className={styles.activityItem}>
+                  <div className={styles.activityDot}></div>
+                  <div className={styles.activityContent}>
+                    <p className={styles.activityTitle}>{activity.title}</p>
+                    <p className={styles.activityMeta}>{activity.partner}</p>
+                  </div>
+                  <p className={styles.activityTime}>
+                    {getTimeAgo(activity.timestamp)}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className={styles.noActivities}>No recent activities</p>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );

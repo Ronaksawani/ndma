@@ -1,0 +1,326 @@
+{
+  "Flood": {
+    "Assam": {
+      "high": [
+        "Dhemaji",
+        "Lakhimpur",
+        "Barpeta",
+        "Dhubri",
+        "Morigaon"
+      ],
+      "moderate": [
+        "Kamrup",
+        "Nagaon",
+        "Golaghat"
+      ]
+    },
+    "Bihar": {
+      "high": [
+        "Darbhanga",
+        "Sitamarhi",
+        "Supaul",
+        "Saharsa",
+        "Madhepura"
+      ],
+      "moderate": [
+        "Patna",
+        "Muzaffarpur",
+        "Bhagalpur"
+      ]
+    },
+    "Uttar Pradesh": {
+      "high": [
+        "Gorakhpur",
+        "Bahraich",
+        "Gonda",
+        "Ballia"
+      ],
+      "moderate": [
+        "Varanasi",
+        "Prayagraj"
+      ]
+    },
+    "West Bengal": {
+      "high": [
+        "Malda",
+        "Murshidabad",
+        "North 24 Parganas"
+      ],
+      "moderate": [
+        "Kolkata",
+        "Hooghly"
+      ]
+    },
+    "Maharashtra": {
+      "high": [
+        "Kolhapur",
+        "Sangli",
+        "Raigad"
+      ],
+      "moderate": [
+        "Mumbai Suburban",
+        "Thane"
+      ]
+    },
+    "Kerala": {
+      "high": [
+        "Pathanamthitta",
+        "Alappuzha",
+        "Ernakulam"
+      ],
+      "moderate": [
+        "Kozhikode",
+        "Thrissur"
+      ]
+    }
+  },
+  "Cyclone": {
+    "Odisha": {
+      "high": [
+        "Puri",
+        "Jagatsinghpur",
+        "Kendrapara",
+        "Ganjam"
+      ],
+      "moderate": [
+        "Khordha",
+        "Balasore"
+      ]
+    },
+    "Andhra Pradesh": {
+      "high": [
+        "Nellore",
+        "Krishna",
+        "East Godavari"
+      ],
+      "moderate": [
+        "Visakhapatnam",
+        "Srikakulam"
+      ]
+    },
+    "West Bengal": {
+      "high": [
+        "South 24 Parganas",
+        "East Midnapore"
+      ],
+      "moderate": [
+        "North 24 Parganas"
+      ]
+    },
+    "Tamil Nadu": {
+      "high": [
+        "Nagapattinam",
+        "Cuddalore",
+        "Chennai"
+      ],
+      "moderate": [
+        "Ramanathapuram"
+      ]
+    },
+    "Gujarat": {
+      "high": [
+        "Kutch",
+        "Jamnagar",
+        "Porbandar"
+      ],
+      "moderate": [
+        "Surat"
+      ]
+    }
+  },
+  "Earthquake": {
+    "Jammu & Kashmir / Ladakh": {
+      "high": [
+        "Leh",
+        "Kargil",
+        "Srinagar"
+      ],
+      "moderate": [
+        "Jammu"
+      ]
+    },
+    "Himachal Pradesh": {
+      "high": [
+        "Kangra",
+        "Kullu",
+        "Chamba"
+      ],
+      "moderate": [
+        "Shimla"
+      ]
+    },
+    "Uttarakhand": {
+      "high": [
+        "Chamoli",
+        "Pithoragarh",
+        "Uttarkashi"
+      ],
+      "moderate": [
+        "Dehradun"
+      ]
+    },
+    "North-East": {
+      "high": [
+        "Aizawl",
+        "Imphal",
+        "Kohima",
+        "Itanagar"
+      ],
+      "moderate": []
+    },
+    "Delhi NCR": {
+      "high": [],
+      "moderate": [
+        "New Delhi",
+        "Gurugram",
+        "Noida"
+      ]
+    }
+  },
+  "Drought": {
+    "Rajasthan": {
+      "high": [
+        "Barmer",
+        "Jaisalmer",
+        "Bikaner"
+      ],
+      "moderate": [
+        "Ajmer",
+        "Nagaur"
+      ]
+    },
+    "Maharashtra": {
+      "high": [
+        "Latur",
+        "Beed",
+        "Osmanabad"
+      ],
+      "moderate": [
+        "Solapur",
+        "Ahmednagar"
+      ]
+    },
+    "Karnataka": {
+      "high": [
+        "Bellary",
+        "Koppal",
+        "Raichur"
+      ],
+      "moderate": [
+        "Tumkur"
+      ]
+    },
+    "Telangana": {
+      "high": [
+        "Mahbubnagar",
+        "Nalgonda"
+      ],
+      "moderate": [
+        "Karimnagar"
+      ]
+    },
+    "Tamil Nadu": {
+      "high": [
+        "Ramanathapuram",
+        "Virudhunagar"
+      ],
+      "moderate": [
+        "Madurai"
+      ]
+    }
+  },
+  "Landslide": {
+    "Uttarakhand": {
+      "high": [
+        "Rudraprayag",
+        "Chamoli",
+        "Uttarkashi"
+      ],
+      "moderate": [
+        "Nainital"
+      ]
+    },
+    "Himachal Pradesh": {
+      "high": [
+        "Kinnaur",
+        "Mandi",
+        "Chamba"
+      ],
+      "moderate": [
+        "Shimla"
+      ]
+    },
+    "Kerala": {
+      "high": [
+        "Idukki",
+        "Wayanad"
+      ],
+      "moderate": [
+        "Kannur"
+      ]
+    },
+    "North-East": {
+      "high": [
+        "Darjeeling",
+        "Sikkim"
+      ],
+      "moderate": [
+        "Assam Hills"
+      ]
+    }
+  },
+  "Heatwave": {
+    "Rajasthan": {
+      "high": [
+        "Jodhpur",
+        "Barmer",
+        "Churu"
+      ],
+      "moderate": [
+        "Jaipur"
+      ]
+    },
+    "Delhi": {
+      "high": [
+        "New Delhi"
+      ],
+      "moderate": []
+    },
+    "Uttar Pradesh": {
+      "high": [
+        "Banda",
+        "Jhansi"
+      ],
+      "moderate": [
+        "Lucknow"
+      ]
+    },
+    "Madhya Pradesh": {
+      "high": [
+        "Gwalior",
+        "Morena"
+      ],
+      "moderate": [
+        "Bhopal"
+      ]
+    },
+    "Telangana": {
+      "high": [
+        "Hyderabad",
+        "Adilabad"
+      ],
+      "moderate": [
+        "Warangal"
+      ]
+    },
+    "Odisha": {
+      "high": [
+        "Angul",
+        "Jharsuguda"
+      ],
+      "moderate": [
+        "Bhubaneswar"
+      ]
+    }
+  }
+}

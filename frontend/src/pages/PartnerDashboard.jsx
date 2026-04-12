@@ -1,29 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { FiBarChart2, FiCheck, FiClock, FiFilter, FiMap } from "react-icons/fi";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  CircleMarker,
-} from "react-leaflet";
-import L from "leaflet";
+import { MapContainer, TileLayer, Popup, CircleMarker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI } from "../utils/api";
+import { generateRecommendations } from "../utils/generateRecommendations";
+import { getColor, getDisasterFromTheme } from "../utils/recommendationEngine";
 import styles from "../styles/Dashboard.module.css";
-
-// Fix default marker icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
 
 export default function PartnerDashboard() {
   const { user } = useAuth();
@@ -34,6 +18,7 @@ export default function PartnerDashboard() {
   });
   const [trainings, setTrainings] = useState([]);
   const [allTrainings, setAllTrainings] = useState([]);
+  const [globalTrainings, setGlobalTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: "all",
@@ -49,17 +34,64 @@ export default function PartnerDashboard() {
     "Fire Safety",
   ];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "approved":
-        return "#10b981"; // green
-      case "pending":
-        return "#f59e0b"; // orange
-      case "rejected":
-        return "#ef4444"; // red
-      default:
-        return "#6b7280"; // gray
+  const recommendationInputs = useMemo(
+    () =>
+      globalTrainings
+        .map((training) => ({
+          district: training.location?.district,
+          disaster: getDisasterFromTheme(training.theme),
+          date: training.startDate,
+        }))
+        .filter((training) => training.district && training.disaster),
+    [globalTrainings],
+  );
+
+  const recommendations = useMemo(
+    () => generateRecommendations(recommendationInputs),
+    [recommendationInputs],
+  );
+
+  const recommendationLookup = useMemo(() => {
+    const lookup = new Map();
+
+    recommendations.forEach((item) => {
+      lookup.set(item.key, item);
+    });
+
+    return lookup;
+  }, [recommendations]);
+
+  const topRecommendations = useMemo(() => {
+    return recommendations
+      .filter((item) => item.priority !== "Low")
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }, [recommendations]);
+
+  const recommendationCounts = useMemo(
+    () => ({
+      high: recommendations.filter((item) => item.priority === "High").length,
+      medium: recommendations.filter((item) => item.priority === "Medium")
+        .length,
+      low: recommendations.filter((item) => item.priority === "Low").length,
+    }),
+    [recommendations],
+  );
+
+  const getTrainingRecommendation = (training) => {
+    const disaster = getDisasterFromTheme(training.theme);
+
+    if (!disaster) {
+      return null;
     }
+
+    return recommendationLookup.get(
+      [
+        training.location?.state || "",
+        training.location?.district || "",
+        disaster,
+      ].join("::"),
+    );
   };
 
   useEffect(() => {
@@ -68,10 +100,19 @@ export default function PartnerDashboard() {
 
   const fetchData = async () => {
     try {
-      const response = await trainingAPI.getAll({ partnerId: user?.organizationId });
-      const data = response.data.trainings || [];
+      const [partnerResponse, globalResponse] = await Promise.all([
+        trainingAPI.getAll({
+          partnerId: user?.organizationId,
+          limit: 1000,
+        }),
+        trainingAPI.getAll({ status: "approved", limit: 5000 }),
+      ]);
+
+      const data = partnerResponse.data.trainings || [];
       setAllTrainings(data);
       setTrainings(data.slice(0, 5)); // Recent submissions
+      setGlobalTrainings(globalResponse.data.trainings || []);
+
       setStats({
         total: data.length,
         pending: data.filter((t) => t.status === "pending").length,
@@ -180,6 +221,55 @@ export default function PartnerDashboard() {
             </div>
           </div>
 
+          <div className={styles["recommendation-section"]}>
+            <div className={styles["recommendation-header"]}>
+              <div>
+                <p className={styles["section-eyebrow"]}>Priority engine</p>
+                <h3>Recommended focus areas</h3>
+              </div>
+              <div className={styles["recommendation-counters"]}>
+                <span className={styles["priority-chip-high"]}>
+                  High {recommendationCounts.high}
+                </span>
+                <span className={styles["priority-chip-medium"]}>
+                  Medium {recommendationCounts.medium}
+                </span>
+                <span className={styles["priority-chip-low"]}>
+                  Low {recommendationCounts.low}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles["recommendation-grid"]}>
+              {topRecommendations.length > 0 ? (
+                topRecommendations.map((item) => (
+                  <div key={item.key} className={styles["recommendation-card"]}>
+                    <div className={styles["recommendation-card-header"]}>
+                      <div>
+                        <p className={styles["recommendation-location"]}>
+                          {item.district}, {item.state}
+                        </p>
+                        <h4>{item.recommendation}</h4>
+                      </div>
+                      <span
+                        className={`${styles["priority-badge"]} ${styles[`priority${item.priority}`]}`}
+                      >
+                        {item.priority}
+                      </span>
+                    </div>
+                    <p className={styles["recommendation-meta"]}>
+                      {item.disaster} risk • score {item.score.toFixed(1)}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className={styles["recommendation-empty"]}>
+                  No priority recommendations available yet.
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Map Section with Filters */}
           <div className="card" style={{ marginBottom: "20px" }}>
             <div className={styles["map-header"]}>
@@ -191,23 +281,23 @@ export default function PartnerDashboard() {
                 <div className={styles["legend-item"]}>
                   <span
                     className={styles["legend-dot"]}
-                    style={{ backgroundColor: "#10b981" }}
+                    style={{ backgroundColor: getColor("High") }}
                   ></span>
-                  Approved
+                  High
                 </div>
                 <div className={styles["legend-item"]}>
                   <span
                     className={styles["legend-dot"]}
-                    style={{ backgroundColor: "#f59e0b" }}
+                    style={{ backgroundColor: getColor("Medium") }}
                   ></span>
-                  Pending
+                  Medium
                 </div>
                 <div className={styles["legend-item"]}>
                   <span
                     className={styles["legend-dot"]}
-                    style={{ backgroundColor: "#ef4444" }}
+                    style={{ backgroundColor: getColor("Low") }}
                   ></span>
-                  Rejected
+                  Low
                 </div>
               </div>
             </div>
@@ -293,6 +383,10 @@ export default function PartnerDashboard() {
                       !training.location?.longitude
                     )
                       return null;
+
+                    const recommendation = getTrainingRecommendation(training);
+                    const priority = recommendation?.priority || "Low";
+
                     return (
                       <CircleMarker
                         key={training._id}
@@ -301,11 +395,13 @@ export default function PartnerDashboard() {
                           training.location.longitude,
                         ]}
                         radius={8}
-                        fillColor={getStatusColor(training.status)}
-                        color="#fff"
-                        weight={2}
-                        opacity={1}
-                        fillOpacity={0.8}
+                        pathOptions={{
+                          fillColor: getColor(priority),
+                          color: "#fff",
+                          weight: 2,
+                          opacity: 1,
+                          fillOpacity: 0.85,
+                        }}
                       >
                         <Popup>
                           <div style={{ minWidth: "200px" }}>
@@ -344,6 +440,27 @@ export default function PartnerDashboard() {
                             >
                               <strong>Participants:</strong>{" "}
                               {training.participantsCount}
+                            </div>
+                            {recommendation && (
+                              <div
+                                style={{
+                                  fontSize: "12px",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                <strong>Recommendation:</strong>{" "}
+                                {recommendation.recommendation}
+                              </div>
+                            )}
+                            <div
+                              style={{ fontSize: "12px", marginBottom: "4px" }}
+                            >
+                              <strong>Priority:</strong>{" "}
+                              <span
+                                className={`${styles["priority-badge"]} ${styles[`priority${priority}`]}`}
+                              >
+                                {priority}
+                              </span>
                             </div>
                             <div style={{ fontSize: "12px", marginTop: "8px" }}>
                               <span

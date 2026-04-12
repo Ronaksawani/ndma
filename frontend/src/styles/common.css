@@ -87,6 +87,12 @@ body,
   transition: background-color 0.3s;
 }
 
+.sidebar-menu a.active {
+  background-color: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 3px 0 0 #fff;
+  font-weight: 600;
+}
+
 .sidebar-icon {
   display: flex;
   align-items: center;
@@ -97,8 +103,7 @@ body,
   min-width: 20px;
 }
 
-.sidebar-menu a:hover,
-.sidebar-menu a.active {
+.sidebar-menu a:hover:not(.active) {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
