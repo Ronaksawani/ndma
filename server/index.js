@@ -27,6 +27,11 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection failed:", err));
 
+  
+app.get("/", (req, res) => {
+  res.send("Welcome to the Disaster Training Management API");
+});
+
 // Routes
 app.use("/api/auth", require("./routes/auth.js"));
 app.use("/api/trainings", require("./routes/trainings.js"));
