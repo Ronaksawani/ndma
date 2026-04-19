@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
+  padding: 11px;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -248,6 +248,74 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.notification-button {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #ffffff;
+  overflow: visible;
+  padding: 0;
+  color: #1f2937;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.notification-button:hover {
+  transform: translateY(-1px);
+  background: #f8fafc;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+}
+
+.notification-count {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-tooltip {
+  position: absolute;
+  right: 52px;
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  background: rgba(17, 24, 39, 0.92);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.notification-button:hover .notification-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
 .map-legend {
@@ -629,6 +697,162 @@
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
   position: relative;
   overflow: hidden;
+}
+
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.3);
+  z-index: 1100;
+  cursor: pointer;
+}
+
+.activities-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(420px, 92vw);
+  background: #fff;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+  z-index: 1200;
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.activities-drawer-open {
+  transform: translateX(0);
+}
+
+.activities-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.activities-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.close-drawer-button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.close-drawer-button:hover {
+  background: #e5e7eb;
+}
+
+.activities-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 84px);
+}
+
+.activity-item {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: background-color 0.2s ease;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-item:hover {
+  background-color: #f9f9f9;
+}
+
+.activity-item-unread {
+  background: #eff6ff;
+}
+
+.activity-item-unread .activity-dot {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.activity-dot {
+  width: 10px;
+  height: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-new-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.14);
+}
+
+.activity-meta {
+  margin: 0.3rem 0 0 0;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.activity-time {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #bbb;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.no-activities {
+  padding: 2rem;
+  text-align: center;
+  color: #999;
+  margin: 0;
 }
 
 .recommendation-header {

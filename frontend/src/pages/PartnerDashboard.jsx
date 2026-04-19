@@ -1,5 +1,12 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { FiBarChart2, FiCheck, FiClock, FiFilter, FiMap } from "react-icons/fi";
+import {
+  FiBarChart2,
+  FiBell,
+  FiCheck,
+  FiClock,
+  FiFilter,
+  FiMap,
+} from "react-icons/fi";
 import {
   MapContainer,
   TileLayer,
@@ -79,6 +86,9 @@ const getFallbackPoint = (state, district, index) => {
   ];
 };
 
+const TRAINING_ACTIVITY_SEEN_STORAGE_KEY =
+  "ndma_partner_seen_training_activities";
+
 export default function PartnerDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -111,6 +121,17 @@ export default function PartnerDashboard() {
     useState(null);
   const [showAllRecommendationPoints, setShowAllRecommendationPoints] =
     useState(false);
+  const [showActivitiesPanel, setShowActivitiesPanel] = useState(false);
+  const [seenTrainingActivityKeys, setSeenTrainingActivityKeys] = useState(
+    () => {
+      try {
+        const raw = localStorage.getItem(TRAINING_ACTIVITY_SEEN_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    },
+  );
   const mapRef = useRef(null);
   const recommendationPanelRef = useRef(null);
 
@@ -275,6 +296,45 @@ export default function PartnerDashboard() {
     [scopedRecommendations, selectedDisaster],
   );
 
+  const seenTrainingActivityKeySet = useMemo(
+    () => new Set(seenTrainingActivityKeys),
+    [seenTrainingActivityKeys],
+  );
+
+  const trainingActivities = useMemo(
+    () =>
+      [...allTrainings]
+        .filter((training) =>
+          ["approved", "rejected"].includes(training.status),
+        )
+        .map((training) => ({
+          id: training._id,
+          activityKey: `training:${training._id}:${training.status}`,
+          title:
+            training.status === "approved"
+              ? `Training Approved: ${training.title}`
+              : `Training Rejected: ${training.title}`,
+          status: training.status,
+          timestamp: new Date(
+            training.approvedAt || training.updatedAt || training.createdAt,
+          ),
+          location: [training.location?.district, training.location?.state]
+            .filter(Boolean)
+            .join(", "),
+          actionPath: `/partner/view-training/${training._id}`,
+        }))
+        .sort((a, b) => b.timestamp - a.timestamp),
+    [allTrainings],
+  );
+
+  const unreadTrainingActivityCount = useMemo(
+    () =>
+      trainingActivities.filter(
+        (activity) => !seenTrainingActivityKeySet.has(activity.activityKey),
+      ).length,
+    [seenTrainingActivityKeySet, trainingActivities],
+  );
+
   const getTrainingRecommendation = (training) => {
     const disaster = getDisasterFromTheme(training.theme);
 
@@ -294,6 +354,34 @@ export default function PartnerDashboard() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!showActivitiesPanel || trainingActivities.length === 0) {
+      return;
+    }
+
+    setSeenTrainingActivityKeys((prev) => {
+      const next = [
+        ...new Set([
+          ...prev,
+          ...trainingActivities.map((activity) => activity.activityKey),
+        ]),
+      ];
+
+      if (next.length === prev.length) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [showActivitiesPanel, trainingActivities]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      TRAINING_ACTIVITY_SEEN_STORAGE_KEY,
+      JSON.stringify(seenTrainingActivityKeys),
+    );
+  }, [seenTrainingActivityKeys]);
 
   const fetchData = async () => {
     try {
@@ -357,6 +445,14 @@ export default function PartnerDashboard() {
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleTrainingActivityClick = (activity) => {
+    setSeenTrainingActivityKeys((prev) => [
+      ...new Set([...prev, activity.activityKey]),
+    ]);
+    setShowActivitiesPanel(false);
+    navigate(activity.actionPath);
   };
 
   const trainingsWithCoords = useMemo(
@@ -730,6 +826,22 @@ export default function PartnerDashboard() {
             Partner Dashboard - {user?.organizationName}
           </h2>
           <div className="nav-right">
+            <button
+              type="button"
+              className={styles["notification-button"]}
+              title="Training updates"
+              onClick={() => setShowActivitiesPanel((prev) => !prev)}
+            >
+              <FiBell />
+              {unreadTrainingActivityCount > 0 && (
+                <span className={styles["notification-count"]}>
+                  {Math.min(unreadTrainingActivityCount, 9)}
+                </span>
+              )}
+              <span className={styles["notification-tooltip"]}>
+                Training Updates
+              </span>
+            </button>
             <div className="user-profile">
               <div className="user-avatar">
                 {user?.contactPerson?.[0]?.toUpperCase()}
@@ -1097,6 +1209,74 @@ export default function PartnerDashboard() {
                     Showing {filteredTrainings.length} of {allTrainings.length}{" "}
                     trainings
                   </div>
+                </div>
+              </aside>
+
+              {showActivitiesPanel && (
+                <button
+                  type="button"
+                  className={styles["panel-backdrop"]}
+                  aria-label="Close training updates"
+                  onClick={() => setShowActivitiesPanel(false)}
+                />
+              )}
+
+              <aside
+                className={`${styles["activities-drawer"]} ${showActivitiesPanel ? styles["activities-drawer-open"] : ""}`}
+                aria-hidden={!showActivitiesPanel}
+              >
+                <div className={styles["activities-header"]}>
+                  <h3>Training Updates</h3>
+                  <button
+                    type="button"
+                    className={styles["close-drawer-button"]}
+                    onClick={() => setShowActivitiesPanel(false)}
+                    aria-label="Close training updates"
+                  >
+                    x
+                  </button>
+                </div>
+
+                <div className={styles["activities-list"]}>
+                  {trainingActivities.length > 0 ? (
+                    trainingActivities.map((activity) => {
+                      const isUnread = !seenTrainingActivityKeySet.has(
+                        activity.activityKey,
+                      );
+
+                      return (
+                        <button
+                          key={activity.activityKey}
+                          type="button"
+                          className={`${styles["activity-item"]} ${isUnread ? styles["activity-item-unread"] : ""}`}
+                          onClick={() => handleTrainingActivityClick(activity)}
+                        >
+                          <div className={styles["activity-dot"]} />
+                          <div className={styles["activity-content"]}>
+                            <p className={styles["activity-title"]}>
+                              {activity.title}
+                              {isUnread && (
+                                <span className={styles["activity-new-badge"]}>
+                                  NEW
+                                </span>
+                              )}
+                            </p>
+                            <p className={styles["activity-meta"]}>
+                              {activity.location || "Location unavailable"} •{" "}
+                              {activity.status}
+                            </p>
+                          </div>
+                          <p className={styles["activity-time"]}>
+                            {activity.timestamp.toLocaleDateString()}
+                          </p>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className={styles["no-activities"]}>
+                      No approved or rejected trainings yet
+                    </p>
+                  )}
                 </div>
               </aside>
             </div>
