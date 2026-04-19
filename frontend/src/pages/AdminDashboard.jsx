@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MapContainer,
   TileLayer,
@@ -82,7 +83,10 @@ const getFallbackPoint = (state, district, index) => {
   ];
 };
 
+const RECENT_ACTIVITY_SEEN_STORAGE_KEY = "ndma_admin_seen_recent_activities";
+
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalTrainings: 0,
     totalParticipants: 0,
@@ -96,7 +100,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
   const [showActivitiesPanel, setShowActivitiesPanel] = useState(false);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
-  const [selectedDisaster, setSelectedDisaster] = useState("Earthquake");
+  const [selectedDisaster, setSelectedDisaster] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showTrainings, setShowTrainings] = useState(true);
   const [recommendationStateFilter, setRecommendationStateFilter] =
@@ -106,7 +110,20 @@ const AdminDashboard = () => {
   const [focusedRecommendationKey, setFocusedRecommendationKey] =
     useState(null);
   const [isolatedZoneKey, setIsolatedZoneKey] = useState(null);
+  const [selectedRecommendationKey, setSelectedRecommendationKey] =
+    useState(null);
+  const [showAllRecommendationPoints, setShowAllRecommendationPoints] =
+    useState(false);
+  const [seenRecentActivityKeys, setSeenRecentActivityKeys] = useState(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_ACTIVITY_SEEN_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
   const mapRef = useRef(null);
+  const recommendationPanelRef = useRef(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -171,12 +188,58 @@ const AdminDashboard = () => {
   );
 
   const priorityRecommendations = useMemo(() => {
-    const maxCards = 6;
+    const maxCards = 10;
     const maxPerDisaster = 2;
 
     const sorted = [...scopedRecommendations]
       .filter((item) => item.priority !== "Low")
+      .filter(
+        (item) => selectedDisaster === "" || item.disaster === selectedDisaster,
+      )
       .sort((a, b) => b.score - a.score);
+
+    if (selectedDisaster !== "" && recommendationStateFilter === "all") {
+      const recommendationsByState = new Map();
+
+      sorted.forEach((item) => {
+        if (!recommendationsByState.has(item.state)) {
+          recommendationsByState.set(item.state, []);
+        }
+        recommendationsByState.get(item.state).push(item);
+      });
+
+      const states = Array.from(recommendationsByState.keys());
+      const picked = [];
+      let roundIndex = 0;
+
+      while (picked.length < maxCards) {
+        let addedInRound = false;
+
+        states.forEach((state) => {
+          if (picked.length >= maxCards) {
+            return;
+          }
+
+          const items = recommendationsByState.get(state) || [];
+          if (roundIndex < items.length) {
+            picked.push(items[roundIndex]);
+            addedInRound = true;
+          }
+        });
+
+        if (!addedInRound) {
+          break;
+        }
+
+        roundIndex += 1;
+      }
+
+      return picked;
+    }
+
+    if (recommendationStateFilter !== "all") {
+      return sorted.slice(0, maxCards);
+    }
 
     const uniqueStateDisasterRecommendations = [];
     const seenStateDisaster = new Set();
@@ -218,7 +281,19 @@ const AdminDashboard = () => {
     }
 
     return picked;
-  }, [scopedRecommendations]);
+  }, [scopedRecommendations, selectedDisaster, recommendationStateFilter]);
+
+  const filteredRecommendationsForMap = useMemo(
+    () =>
+      [...scopedRecommendations]
+        .filter((item) => item.priority !== "Low")
+        .filter(
+          (item) =>
+            selectedDisaster === "" || item.disaster === selectedDisaster,
+        )
+        .sort((a, b) => b.score - a.score),
+    [scopedRecommendations, selectedDisaster],
+  );
 
   const recommendationCounts = useMemo(
     () => ({
@@ -230,6 +305,19 @@ const AdminDashboard = () => {
         .length,
     }),
     [scopedRecommendations],
+  );
+
+  const seenRecentActivityKeySet = useMemo(
+    () => new Set(seenRecentActivityKeys),
+    [seenRecentActivityKeys],
+  );
+
+  const unreadRecentActivitiesCount = useMemo(
+    () =>
+      recentActivities.filter(
+        (activity) => !seenRecentActivityKeySet.has(activity.activityKey),
+      ).length,
+    [recentActivities, seenRecentActivityKeySet],
   );
 
   const mappableLocations = useMemo(
@@ -453,16 +541,95 @@ const AdminDashboard = () => {
     });
   };
 
+  const buildRecommendationHeatmapZones = (recommendationList) => {
+    const zoneMap = new Map();
+
+    recommendationList.forEach((item, index) => {
+      const zoneKey = `${item.disaster}::${item.state}::${item.district}`;
+      if (zoneMap.has(zoneKey)) {
+        return;
+      }
+
+      const verifiedCoord = districtCoordsData.entries?.find(
+        (entry) =>
+          normalizeText(entry.district) === normalizeText(item.district) &&
+          normalizeText(entry.state) === normalizeText(item.state),
+      );
+
+      const coordinateEntry = districtCoordinateLookup.get(
+        normalizeText(item.district),
+      );
+
+      const center = verifiedCoord
+        ? [verifiedCoord.latitude, verifiedCoord.longitude]
+        : coordinateEntry
+          ? [
+              coordinateEntry.lat / coordinateEntry.count,
+              coordinateEntry.lng / coordinateEntry.count,
+            ]
+          : getFallbackPoint(item.state, item.district, index);
+
+      const riskLevel =
+        item.priority === "High"
+          ? "HIGH"
+          : item.priority === "Medium"
+            ? "MEDIUM"
+            : "LOW";
+
+      zoneMap.set(zoneKey, {
+        key: zoneKey,
+        state: item.state,
+        district: item.district,
+        disaster: item.disaster,
+        center,
+        riskScore: Number(item.score.toFixed(1)),
+        riskLevel,
+        reasons: [
+          `Priority ${item.priority} recommendation for ${item.disaster} preparedness in this district.`,
+        ],
+        recommendationText: item.recommendation,
+      });
+    });
+
+    return Array.from(zoneMap.values());
+  };
+
+  const recommendationHeatmapZones = useMemo(
+    () => buildRecommendationHeatmapZones(priorityRecommendations),
+    [districtCoordinateLookup, priorityRecommendations],
+  );
+
+  const allRecommendationHeatmapZones = useMemo(
+    () => buildRecommendationHeatmapZones(filteredRecommendationsForMap),
+    [districtCoordinateLookup, filteredRecommendationsForMap],
+  );
+
   const visibleHeatmapZones = useMemo(() => {
-    if (!isolatedZoneKey) {
-      return heatmapZones;
+    const sourceZones = showAllRecommendationPoints
+      ? allRecommendationHeatmapZones
+      : recommendationHeatmapZones;
+
+    if (isolatedZoneKey) {
+      const isolatedZone =
+        sourceZones.find((zone) => zone.key === isolatedZoneKey) ||
+        heatmapZones.find((zone) => zone.key === isolatedZoneKey);
+      if (isolatedZone) {
+        return [isolatedZone];
+      }
     }
 
-    const isolatedZone = heatmapZones.find(
-      (zone) => zone.key === isolatedZoneKey,
-    );
-    return isolatedZone ? [isolatedZone] : heatmapZones;
-  }, [heatmapZones, isolatedZoneKey]);
+    if (sourceZones.length === 0) {
+      return [];
+    }
+
+    return sourceZones;
+  }, [
+    allRecommendationHeatmapZones,
+    heatmapZones,
+    isolatedZoneKey,
+    recommendationHeatmapZones,
+    showAllRecommendationPoints,
+  ]);
 
   const getZoneKeyFromRecommendation = (item) =>
     `${item.disaster}::${item.state}::${item.district}`;
@@ -474,7 +641,28 @@ const AdminDashboard = () => {
     setSelectedDisaster(item.disaster);
     setIsolatedZoneKey(zoneKey);
     setFocusedRecommendationKey(zoneKey);
+    setSelectedRecommendationKey(item.key);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        recommendationPanelRef.current &&
+        !recommendationPanelRef.current.contains(event.target)
+      ) {
+        setSelectedRecommendationKey(null);
+        setIsolatedZoneKey(null);
+        setShowTrainings(true);
+      }
+    };
+
+    if (selectedRecommendationKey) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [selectedRecommendationKey]);
 
   useEffect(() => {
     if (!focusedRecommendationKey || !mapRef.current) {
@@ -496,6 +684,13 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      RECENT_ACTIVITY_SEEN_STORAGE_KEY,
+      JSON.stringify(seenRecentActivityKeys),
+    );
+  }, [seenRecentActivityKeys]);
 
   // Apply filters to locations
   useEffect(() => {
@@ -538,14 +733,18 @@ const AdminDashboard = () => {
       setTrainingHistory(trainingsRes.data.trainings || []);
       setTrainingLocations(locationsRes.data || []);
 
-      // Combine training activities with pending partner requests
-      const activities = dashboardRes.data.recentActivities.map((training) => ({
-        id: training._id,
-        title: training.title,
-        type: "Training",
-        timestamp: new Date(training.createdAt),
-        partner: training.partnerId?.organizationName || "Unknown",
-      }));
+      const trainings = trainingsRes.data.trainings || [];
+      const pendingTrainingActivities = trainings
+        .filter((training) => training.status === "pending")
+        .map((training) => ({
+          id: training._id,
+          activityKey: `training:${training._id}`,
+          title: training.title,
+          type: "Training Approval",
+          timestamp: new Date(training.createdAt),
+          partner: training.partnerId?.organizationName || "Unknown",
+          actionPath: `/admin/training/${training._id}`,
+        }));
 
       // Fetch pending partner requests
       try {
@@ -554,21 +753,24 @@ const AdminDashboard = () => {
 
         const pendingActivities = pendingPartners.map((partner) => ({
           id: partner._id,
+          activityKey: `partner:${partner._id}`,
           title: `New Partner Request: ${partner.organizationName}`,
           type: "Partner Request",
           timestamp: new Date(partner.createdAt),
           partner: partner.organizationName,
+          actionPath: null,
         }));
 
         // Combine and sort by timestamp (newest first)
-        const allActivities = [...activities, ...pendingActivities].sort(
-          (a, b) => b.timestamp - a.timestamp,
-        );
+        const allActivities = [
+          ...pendingTrainingActivities,
+          ...pendingActivities,
+        ].sort((a, b) => b.timestamp - a.timestamp);
 
         setRecentActivities(allActivities);
       } catch (err) {
         console.error("Error fetching pending partners:", err);
-        setRecentActivities(activities);
+        setRecentActivities(pendingTrainingActivities);
       }
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
@@ -591,6 +793,19 @@ const AdminDashboard = () => {
     if (diffDays < 7) return `${diffDays} days ago`;
 
     return date.toLocaleDateString();
+  };
+
+  const handleRecentActivityClick = (activity) => {
+    if (!seenRecentActivityKeySet.has(activity.activityKey)) {
+      setSeenRecentActivityKeys((prev) => [
+        ...new Set([...prev, activity.activityKey]),
+      ]);
+    }
+
+    if (activity.actionPath) {
+      setShowActivitiesPanel(false);
+      navigate(activity.actionPath);
+    }
   };
 
   if (loading) {
@@ -621,9 +836,9 @@ const AdminDashboard = () => {
               onClick={() => setShowActivitiesPanel((prev) => !prev)}
             >
               <FiBell />
-              {recentActivities.length > 0 && (
+              {unreadRecentActivitiesCount > 0 && (
                 <span className={styles.notificationCount}>
-                  {Math.min(recentActivities.length, 9)}
+                  {Math.min(unreadRecentActivitiesCount, 9)}
                 </span>
               )}
               <span className={styles.notificationTooltip}>
@@ -735,7 +950,7 @@ const AdminDashboard = () => {
                             },
                           }}
                           center={zone.center}
-                          radius={zone.riskScore * 500}
+                          radius={22000 + zone.riskScore * 900}
                           pathOptions={{
                             fillColor: getHeatColor(zone.riskLevel),
                             color: getHeatColor(zone.riskLevel),
@@ -773,11 +988,12 @@ const AdminDashboard = () => {
                               <p>
                                 <strong>Recommendation:</strong>{" "}
                                 {highlightPopupKeywords(
-                                  zone.riskLevel === "HIGH"
-                                    ? `Conduct ${selectedDisaster} training within 2 weeks.`
-                                    : zone.riskLevel === "MEDIUM"
-                                      ? `Plan ${selectedDisaster} training within 1 month.`
-                                      : `Maintain periodic ${selectedDisaster} drills every quarter.`,
+                                  zone.recommendationText ||
+                                    (zone.riskLevel === "HIGH"
+                                      ? `Conduct ${zone.disaster || selectedDisaster} training within 2 weeks.`
+                                      : zone.riskLevel === "MEDIUM"
+                                        ? `Plan ${zone.disaster || selectedDisaster} training within 1 month.`
+                                        : `Maintain periodic ${zone.disaster || selectedDisaster} drills every quarter.`),
                                 )}
                               </p>
                             </div>
@@ -794,7 +1010,7 @@ const AdminDashboard = () => {
                           <CircleMarker
                             key={location.id}
                             center={[location.latitude, location.longitude]}
-                            radius={9}
+                            radius={6}
                             pathOptions={{
                               fillColor: getColor(priority),
                               color: "#ffffff",
@@ -1009,8 +1225,15 @@ const AdminDashboard = () => {
                       <label>Disaster Type</label>
                       <select
                         value={selectedDisaster}
-                        onChange={(e) => setSelectedDisaster(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedDisaster(e.target.value);
+                          setSelectedRecommendationKey(null);
+                          setIsolatedZoneKey(null);
+                          setFocusedRecommendationKey(null);
+                          setShowTrainings(true);
+                        }}
                       >
+                        <option value="">None</option>
                         {DISASTER_OPTIONS.map((disaster) => (
                           <option key={disaster} value={disaster}>
                             {disaster}
@@ -1034,12 +1257,15 @@ const AdminDashboard = () => {
                   </div>
                 </aside>
 
-                <div className={styles.recommendationGrid}>
+                <div
+                  className={styles.recommendationGrid}
+                  ref={recommendationPanelRef}
+                >
                   {priorityRecommendations.length > 0 ? (
                     priorityRecommendations.map((item) => (
                       <div
                         key={item.key}
-                        className={`${styles.recommendationCard} ${styles.recommendationCardClickable}`}
+                        className={`${styles.recommendationCard} ${styles.recommendationCardClickable} ${selectedRecommendationKey === item.key ? styles.recommendationCardSelected : ""}`}
                         onClick={() => handleRecommendationClick(item)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1073,6 +1299,24 @@ const AdminDashboard = () => {
                     <div className={styles.recommendationEmpty}>
                       No high-priority recommendations yet.
                     </div>
+                  )}
+
+                  {filteredRecommendationsForMap.length > 0 && (
+                    <label className={styles.recommendationMapToggle}>
+                      <input
+                        type="checkbox"
+                        checked={showAllRecommendationPoints}
+                        onChange={(e) => {
+                          setShowAllRecommendationPoints(e.target.checked);
+                          setShowHeatmap(true);
+                          setIsolatedZoneKey(null);
+                          setSelectedRecommendationKey(null);
+                          setFocusedRecommendationKey(null);
+                        }}
+                      />
+                      Show all points on map (
+                      {filteredRecommendationsForMap.length})
+                    </label>
                   )}
                 </div>
               </div>
@@ -1109,16 +1353,30 @@ const AdminDashboard = () => {
             <div className={styles.activitiesList}>
               {recentActivities.length > 0 ? (
                 recentActivities.map((activity) => (
-                  <div key={activity.id} className={styles.activityItem}>
+                  <button
+                    key={activity.activityKey}
+                    type="button"
+                    className={`${styles.activityItem} ${activity.actionPath ? styles.activityItemClickable : ""} ${!seenRecentActivityKeySet.has(activity.activityKey) ? styles.activityItemUnread : ""}`}
+                    onClick={() => handleRecentActivityClick(activity)}
+                  >
                     <div className={styles.activityDot}></div>
                     <div className={styles.activityContent}>
-                      <p className={styles.activityTitle}>{activity.title}</p>
-                      <p className={styles.activityMeta}>{activity.partner}</p>
+                      <p className={styles.activityTitle}>
+                        {activity.title}
+                        {!seenRecentActivityKeySet.has(
+                          activity.activityKey,
+                        ) && (
+                          <span className={styles.activityNewBadge}>NEW</span>
+                        )}
+                      </p>
+                      <p className={styles.activityMeta}>
+                        {activity.partner} • {activity.type}
+                      </p>
                     </div>
                     <p className={styles.activityTime}>
                       {getTimeAgo(activity.timestamp)}
                     </p>
-                  </div>
+                  </button>
                 ))
               ) : (
                 <p className={styles.noActivities}>No recent activities</p>

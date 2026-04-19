@@ -96,7 +96,7 @@ export default function PartnerDashboard() {
     theme: "all",
     search: "",
   });
-  const [selectedDisaster, setSelectedDisaster] = useState("Earthquake");
+  const [selectedDisaster, setSelectedDisaster] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showTrainings, setShowTrainings] = useState(true);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
@@ -107,7 +107,12 @@ export default function PartnerDashboard() {
   const [focusedRecommendationKey, setFocusedRecommendationKey] =
     useState(null);
   const [isolatedZoneKey, setIsolatedZoneKey] = useState(null);
+  const [selectedRecommendationKey, setSelectedRecommendationKey] =
+    useState(null);
+  const [showAllRecommendationPoints, setShowAllRecommendationPoints] =
+    useState(false);
   const mapRef = useRef(null);
+  const recommendationPanelRef = useRef(null);
 
   const themes = [
     "Flood Management",
@@ -163,12 +168,58 @@ export default function PartnerDashboard() {
   );
 
   const topRecommendations = useMemo(() => {
-    const maxCards = 5;
+    const maxCards = 10;
     const maxPerDisaster = 2;
 
     const sorted = [...scopedRecommendations]
       .filter((item) => item.priority !== "Low")
+      .filter(
+        (item) => selectedDisaster === "" || item.disaster === selectedDisaster,
+      )
       .sort((a, b) => b.score - a.score);
+
+    if (selectedDisaster !== "" && recommendationStateFilter === "all") {
+      const recommendationsByState = new Map();
+
+      sorted.forEach((item) => {
+        if (!recommendationsByState.has(item.state)) {
+          recommendationsByState.set(item.state, []);
+        }
+        recommendationsByState.get(item.state).push(item);
+      });
+
+      const states = Array.from(recommendationsByState.keys());
+      const picked = [];
+      let roundIndex = 0;
+
+      while (picked.length < maxCards) {
+        let addedInRound = false;
+
+        states.forEach((state) => {
+          if (picked.length >= maxCards) {
+            return;
+          }
+
+          const items = recommendationsByState.get(state) || [];
+          if (roundIndex < items.length) {
+            picked.push(items[roundIndex]);
+            addedInRound = true;
+          }
+        });
+
+        if (!addedInRound) {
+          break;
+        }
+
+        roundIndex += 1;
+      }
+
+      return picked;
+    }
+
+    if (recommendationStateFilter !== "all") {
+      return sorted.slice(0, maxCards);
+    }
 
     const uniqueStateDisasterRecommendations = [];
     const seenStateDisaster = new Set();
@@ -210,7 +261,19 @@ export default function PartnerDashboard() {
     }
 
     return picked;
-  }, [scopedRecommendations]);
+  }, [scopedRecommendations, selectedDisaster, recommendationStateFilter]);
+
+  const filteredRecommendationsForMap = useMemo(
+    () =>
+      [...scopedRecommendations]
+        .filter((item) => item.priority !== "Low")
+        .filter(
+          (item) =>
+            selectedDisaster === "" || item.disaster === selectedDisaster,
+        )
+        .sort((a, b) => b.score - a.score),
+    [scopedRecommendations, selectedDisaster],
+  );
 
   const getTrainingRecommendation = (training) => {
     const disaster = getDisasterFromTheme(training.theme);
@@ -452,13 +515,18 @@ export default function PartnerDashboard() {
   }, [districtCoordinateLookup, globalTrainings, selectedDisaster]);
 
   const heatmapRecommendationText = (zone) => {
+    if (zone.recommendationText) {
+      return zone.recommendationText;
+    }
+
+    const disasterType = zone.disaster || selectedDisaster;
     if (zone.riskLevel === "HIGH") {
-      return `Conduct ${selectedDisaster} training within 2 weeks.`;
+      return `Conduct ${disasterType} training within 2 weeks.`;
     }
     if (zone.riskLevel === "MEDIUM") {
-      return `Plan ${selectedDisaster} training within 1 month.`;
+      return `Plan ${disasterType} training within 1 month.`;
     }
-    return `Maintain periodic ${selectedDisaster} drills every quarter.`;
+    return `Maintain periodic ${disasterType} drills every quarter.`;
   };
 
   const highlightPopupKeywords = (text) => {
@@ -513,16 +581,95 @@ export default function PartnerDashboard() {
     });
   };
 
+  const buildRecommendationHeatmapZones = (recommendationList) => {
+    const zoneMap = new Map();
+
+    recommendationList.forEach((item, index) => {
+      const zoneKey = `${item.disaster}::${item.state}::${item.district}`;
+      if (zoneMap.has(zoneKey)) {
+        return;
+      }
+
+      const verifiedCoord = districtCoordsData.entries?.find(
+        (entry) =>
+          normalizeText(entry.district) === normalizeText(item.district) &&
+          normalizeText(entry.state) === normalizeText(item.state),
+      );
+
+      const coordinateEntry = districtCoordinateLookup.get(
+        normalizeText(item.district),
+      );
+
+      const center = verifiedCoord
+        ? [verifiedCoord.latitude, verifiedCoord.longitude]
+        : coordinateEntry
+          ? [
+              coordinateEntry.lat / coordinateEntry.count,
+              coordinateEntry.lng / coordinateEntry.count,
+            ]
+          : getFallbackPoint(item.state, item.district, index);
+
+      const riskLevel =
+        item.priority === "High"
+          ? "HIGH"
+          : item.priority === "Medium"
+            ? "MEDIUM"
+            : "LOW";
+
+      zoneMap.set(zoneKey, {
+        key: zoneKey,
+        state: item.state,
+        district: item.district,
+        disaster: item.disaster,
+        center,
+        riskScore: Number(item.score.toFixed(1)),
+        riskLevel,
+        reasons: [
+          `Priority ${item.priority} recommendation for ${item.disaster} preparedness in this district.`,
+        ],
+        recommendationText: item.recommendation,
+      });
+    });
+
+    return Array.from(zoneMap.values());
+  };
+
+  const recommendationHeatmapZones = useMemo(
+    () => buildRecommendationHeatmapZones(topRecommendations),
+    [topRecommendations, districtCoordinateLookup],
+  );
+
+  const allRecommendationHeatmapZones = useMemo(
+    () => buildRecommendationHeatmapZones(filteredRecommendationsForMap),
+    [filteredRecommendationsForMap, districtCoordinateLookup],
+  );
+
   const visibleHeatmapZones = useMemo(() => {
-    if (!isolatedZoneKey) {
-      return heatmapZones;
+    const sourceZones = showAllRecommendationPoints
+      ? allRecommendationHeatmapZones
+      : recommendationHeatmapZones;
+
+    if (isolatedZoneKey) {
+      const isolatedZone =
+        sourceZones.find((zone) => zone.key === isolatedZoneKey) ||
+        heatmapZones.find((zone) => zone.key === isolatedZoneKey);
+      if (isolatedZone) {
+        return [isolatedZone];
+      }
     }
 
-    const isolatedZone = heatmapZones.find(
-      (zone) => zone.key === isolatedZoneKey,
-    );
-    return isolatedZone ? [isolatedZone] : heatmapZones;
-  }, [heatmapZones, isolatedZoneKey]);
+    if (sourceZones.length === 0) {
+      return [];
+    }
+
+    return sourceZones;
+  }, [
+    allRecommendationHeatmapZones,
+    heatmapZones,
+    isolatedZoneKey,
+    recommendationHeatmapZones,
+    showAllRecommendationPoints,
+  ]);
 
   const getZoneKeyFromRecommendation = (item) =>
     `${item.disaster}::${item.state}::${item.district}`;
@@ -534,7 +681,28 @@ export default function PartnerDashboard() {
     setSelectedDisaster(item.disaster);
     setIsolatedZoneKey(zoneKey);
     setFocusedRecommendationKey(zoneKey);
+    setSelectedRecommendationKey(item.key);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        recommendationPanelRef.current &&
+        !recommendationPanelRef.current.contains(event.target)
+      ) {
+        setSelectedRecommendationKey(null);
+        setIsolatedZoneKey(null);
+        setShowTrainings(true);
+      }
+    };
+
+    if (selectedRecommendationKey) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [selectedRecommendationKey]);
 
   useEffect(() => {
     if (!focusedRecommendationKey || !mapRef.current) {
@@ -707,7 +875,7 @@ export default function PartnerDashboard() {
                               },
                             }}
                             center={zone.center}
-                            radius={20000 + zone.riskScore * 350}
+                            radius={22000 + zone.riskScore * 700}
                             pathOptions={{
                               color: getHeatColor(zone.riskLevel),
                               fillColor: getHeatColor(zone.riskLevel),
@@ -1001,8 +1169,15 @@ export default function PartnerDashboard() {
                     <label>Disaster Type</label>
                     <select
                       value={selectedDisaster}
-                      onChange={(e) => setSelectedDisaster(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedDisaster(e.target.value);
+                        setSelectedRecommendationKey(null);
+                        setIsolatedZoneKey(null);
+                        setFocusedRecommendationKey(null);
+                        setShowTrainings(true);
+                      }}
                     >
+                      <option value="">None</option>
                       {DISASTER_OPTIONS.map((disaster) => (
                         <option key={disaster} value={disaster}>
                           {disaster}
@@ -1028,12 +1203,15 @@ export default function PartnerDashboard() {
                 </div>
               </aside>
 
-              <div className={styles["recommendation-grid"]}>
+              <div
+                className={styles["recommendation-grid"]}
+                ref={recommendationPanelRef}
+              >
                 {topRecommendations.length > 0 ? (
                   topRecommendations.map((item) => (
                     <div
                       key={item.key}
-                      className={`${styles["recommendation-card"]} ${styles["recommendation-card-clickable"]}`}
+                      className={`${styles["recommendation-card"]} ${styles["recommendation-card-clickable"]} ${selectedRecommendationKey === item.key ? styles["recommendation-card-selected"] : ""}`}
                       onClick={() => handleRecommendationClick(item)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
@@ -1067,6 +1245,24 @@ export default function PartnerDashboard() {
                   <div className={styles["recommendation-empty"]}>
                     No priority recommendations available yet.
                   </div>
+                )}
+
+                {filteredRecommendationsForMap.length > 0 && (
+                  <label className={styles["recommendation-map-toggle"]}>
+                    <input
+                      type="checkbox"
+                      checked={showAllRecommendationPoints}
+                      onChange={(e) => {
+                        setShowAllRecommendationPoints(e.target.checked);
+                        setShowHeatmap(true);
+                        setIsolatedZoneKey(null);
+                        setSelectedRecommendationKey(null);
+                        setFocusedRecommendationKey(null);
+                      }}
+                    />
+                    Show all points on map (
+                    {filteredRecommendationsForMap.length})
+                  </label>
                 )}
               </div>
             </div>

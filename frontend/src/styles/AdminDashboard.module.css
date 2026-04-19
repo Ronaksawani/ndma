@@ -477,7 +477,7 @@
 
 .mapContainer {
   flex: 1;
-  height: 450px;
+  height: 478px;
   border-radius: 0 0 12px 12px;
 }
 
@@ -631,6 +631,12 @@
   align-items: flex-start;
   gap: 1rem;
   transition: background-color 0.2s ease;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border-left: none;
+  border-right: none;
+  border-top: none;
 }
 
 .activityItem:last-child {
@@ -639,6 +645,18 @@
 
 .activityItem:hover {
   background-color: #f9f9f9;
+}
+
+.activityItemClickable {
+  cursor: pointer;
+}
+
+.activityItemUnread {
+  background: #eff6ff;
+}
+
+.activityItemUnread .activityDot {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
 }
 
 .activityDot {
@@ -660,9 +678,25 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.activityNewBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.14);
 }
 
 .activityMeta {
@@ -1129,6 +1163,13 @@
   outline-offset: 2px;
 }
 
+.recommendationCardSelected {
+  background: linear-gradient(180deg, #dbeafe 0%, #e0f2fe 100%);
+  border-color: #2563eb;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.24);
+  transform: translateY(-2px);
+}
+
 .recommendationCardHeader {
   display: flex;
   justify-content: space-between;
@@ -1167,6 +1208,25 @@
   background: rgba(248, 250, 252, 0.85);
   color: #64748b;
   border: 1px dashed rgba(100, 116, 139, 0.22);
+}
+
+.recommendationMapToggle {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: #1e3a8a;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.recommendationMapToggle input {
+  width: 14px;
+  height: 14px;
 }
 
 .legendDot.high {
