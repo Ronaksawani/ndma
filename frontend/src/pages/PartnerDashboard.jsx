@@ -99,6 +99,7 @@ export default function PartnerDashboard() {
   const [selectedDisaster, setSelectedDisaster] = useState("Earthquake");
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showTrainings, setShowTrainings] = useState(true);
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
   const themes = [
     "Flood Management",
@@ -484,279 +485,322 @@ export default function PartnerDashboard() {
                   <FiMap size={20} style={{ marginRight: "8px" }} />
                   <h3>Training Locations Map</h3>
                 </div>
-                <div className={styles["map-legend"]}>
-                  <div className={styles["legend-item"]}>
-                    <span
-                      className={styles["legend-dot"]}
-                      style={{ backgroundColor: getColor("High") }}
-                    ></span>
-                    High
+                <div className={styles["map-header-actions"]}>
+                  <div className={styles["map-legend"]}>
+                    <div className={styles["legend-item"]}>
+                      <span
+                        className={styles["legend-dot"]}
+                        style={{ backgroundColor: getColor("High") }}
+                      ></span>
+                      High
+                    </div>
+                    <div className={styles["legend-item"]}>
+                      <span
+                        className={styles["legend-dot"]}
+                        style={{ backgroundColor: getColor("Medium") }}
+                      ></span>
+                      Medium
+                    </div>
+                    <div className={styles["legend-item"]}>
+                      <span
+                        className={styles["legend-dot"]}
+                        style={{ backgroundColor: getColor("Low") }}
+                      ></span>
+                      Low
+                    </div>
                   </div>
-                  <div className={styles["legend-item"]}>
-                    <span
-                      className={styles["legend-dot"]}
-                      style={{ backgroundColor: getColor("Medium") }}
-                    ></span>
-                    Medium
-                  </div>
-                  <div className={styles["legend-item"]}>
-                    <span
-                      className={styles["legend-dot"]}
-                      style={{ backgroundColor: getColor("Low") }}
-                    ></span>
-                    Low
-                  </div>
-                </div>
-              </div>
-
-              {/* Filters */}
-              <div className={styles["map-filters"]}>
-                <div className={styles["top-control-group"]}>
-                  <span className={styles["filter-label"]}>Disaster Type:</span>
-                  <select
-                    value={selectedDisaster}
-                    onChange={(e) => setSelectedDisaster(e.target.value)}
-                    className={styles["filter-select"]}
+                  <button
+                    type="button"
+                    className={styles["filter-toggle-button"]}
+                    onClick={() => setShowFilterDrawer((prev) => !prev)}
+                    aria-expanded={showFilterDrawer}
+                    aria-label="Toggle filters"
                   >
-                    {DISASTER_OPTIONS.map((disaster) => (
-                      <option key={disaster} value={disaster}>
-                        {disaster}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <label className={styles["control-checkbox"]}>
-                  <input
-                    type="checkbox"
-                    checked={showHeatmap}
-                    onChange={(e) => setShowHeatmap(e.target.checked)}
-                  />
-                  Show Heatmap
-                </label>
-                <label className={styles["control-checkbox"]}>
-                  <input
-                    type="checkbox"
-                    checked={showTrainings}
-                    onChange={(e) => setShowTrainings(e.target.checked)}
-                  />
-                  Show Trainings
-                </label>
-
-                <div className={styles["filter-group"]}>
-                  <FiFilter size={16} />
-                  <span className={styles["filter-label"]}>Filters:</span>
-                </div>
-                <div className={styles["filter-group"]}>
-                  <select
-                    value={filters.status}
-                    onChange={(e) =>
-                      handleFilterChange("status", e.target.value)
-                    }
-                    className={styles["filter-select"]}
-                  >
-                    <option value="all">All Status</option>
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-                <div className={styles["filter-group"]}>
-                  <select
-                    value={filters.theme}
-                    onChange={(e) =>
-                      handleFilterChange("theme", e.target.value)
-                    }
-                    className={styles["filter-select"]}
-                  >
-                    <option value="all">All Themes</option>
-                    {themes.map((theme) => (
-                      <option key={theme} value={theme}>
-                        {theme}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className={styles["filter-group"]}>
-                  <input
-                    type="text"
-                    placeholder="Search by title or location..."
-                    value={filters.search}
-                    onChange={(e) =>
-                      handleFilterChange("search", e.target.value)
-                    }
-                    className={styles["filter-search"]}
-                  />
-                </div>
-                <div className={styles["filter-count"]}>
-                  Showing {filteredTrainings.length} of {allTrainings.length}{" "}
-                  trainings
+                    <FiFilter />
+                  </button>
                 </div>
               </div>
 
               {/* Map */}
-              <div className={styles["map-container"]}>
-                {loading ? (
-                  <div className={styles["map-loading"]}>
-                    <div className="spinner"></div>
-                    <p>Loading map...</p>
-                  </div>
-                ) : !showHeatmap && !showTrainings ? (
-                  <div className={styles["map-empty"]}>
-                    <FiMap size={48} />
-                    <p>Enable Heatmap or Trainings to view map layers</p>
-                  </div>
-                ) : !showHeatmap && trainingsWithCoords.length === 0 ? (
-                  <div className={styles["map-empty"]}>
-                    <FiMap size={48} />
-                    <p>No trainings with location data</p>
-                  </div>
-                ) : (
-                  <MapContainer
-                    center={[20.5937, 78.9629]}
-                    zoom={5}
-                    style={{
-                      height: "500px",
-                      width: "100%",
-                      borderRadius: "8px",
-                    }}
-                  >
-                    <TileLayer
-                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    {showHeatmap &&
-                      heatmapZones.map((zone) => (
-                        <Circle
-                          key={zone.key}
-                          center={zone.center}
-                          radius={20000 + zone.riskScore * 350}
-                          pathOptions={{
-                            color: getHeatColor(zone.riskLevel),
-                            fillColor: getHeatColor(zone.riskLevel),
-                            fillOpacity: 0.26,
-                            weight: 2,
-                          }}
-                        >
-                          <Popup>
-                            <div className={styles["heatmap-popup"]}>
-                              <h4>
-                                {zone.district}, {zone.state}
-                              </h4>
-                              <p>
-                                <strong>Risk Level:</strong> {zone.riskLevel}{" "}
-                                (Score: {zone.riskScore})
-                              </p>
-                              <p>
-                                <strong>Reason:</strong>
-                              </p>
-                              <ul>
-                                {zone.reasons.map((reason) => (
-                                  <li key={reason}>{reason}</li>
-                                ))}
-                              </ul>
-                              <p>
-                                <strong>Recommendation:</strong>{" "}
-                                {heatmapRecommendationText(zone)}
-                              </p>
-                              <button
-                                type="button"
-                                className={styles["schedule-btn"]}
-                                onClick={() =>
-                                  navigate("/partner/add-training")
-                                }
-                              >
-                                Schedule Training
-                              </button>
-                            </div>
-                          </Popup>
-                        </Circle>
-                      ))}
-
-                    {showTrainings &&
-                      trainingsWithCoords.map((training) => {
-                        const recommendation =
-                          getTrainingRecommendation(training);
-                        const priority = recommendation?.priority || "Low";
-
-                        return (
-                          <CircleMarker
-                            key={training._id}
-                            center={[
-                              Number(training.location.latitude),
-                              Number(training.location.longitude),
-                            ]}
-                            radius={8}
+              <div className={styles["map-stage"]}>
+                <div className={styles["map-container"]}>
+                  {loading ? (
+                    <div className={styles["map-loading"]}>
+                      <div className="spinner"></div>
+                      <p>Loading map...</p>
+                    </div>
+                  ) : !showHeatmap && !showTrainings ? (
+                    <div className={styles["map-empty"]}>
+                      <FiMap size={48} />
+                      <p>Enable Risk Heatmap or Trainings to view map layers</p>
+                    </div>
+                  ) : !showHeatmap && trainingsWithCoords.length === 0 ? (
+                    <div className={styles["map-empty"]}>
+                      <FiMap size={48} />
+                      <p>No trainings with location data</p>
+                    </div>
+                  ) : (
+                    <MapContainer
+                      center={[20.5937, 78.9629]}
+                      zoom={5}
+                      style={{
+                        height: "500px",
+                        width: "100%",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      {showHeatmap &&
+                        heatmapZones.map((zone) => (
+                          <Circle
+                            key={zone.key}
+                            center={zone.center}
+                            radius={20000 + zone.riskScore * 350}
                             pathOptions={{
-                              fillColor: getColor(priority),
-                              color: "#fff",
+                              color: getHeatColor(zone.riskLevel),
+                              fillColor: getHeatColor(zone.riskLevel),
+                              fillOpacity: 0.26,
                               weight: 2,
-                              opacity: 1,
-                              fillOpacity: 0.95,
                             }}
                           >
                             <Popup>
-                              <div style={{ minWidth: "200px" }}>
-                                <h4
-                                  style={{
-                                    marginBottom: "8px",
-                                    fontSize: "14px",
-                                    fontWeight: "600",
-                                  }}
-                                >
-                                  {training.title}
+                              <div className={styles["heatmap-popup"]}>
+                                <h4>
+                                  {zone.district}, {zone.state}
                                 </h4>
-                                <div
-                                  style={{
-                                    fontSize: "12px",
-                                    marginBottom: "4px",
-                                  }}
+                                <p>
+                                  <strong>Risk Level:</strong> {zone.riskLevel}{" "}
+                                  (Score: {zone.riskScore})
+                                </p>
+                                <p>
+                                  <strong>Reason:</strong>
+                                </p>
+                                <ul>
+                                  {zone.reasons.map((reason) => (
+                                    <li key={reason}>{reason}</li>
+                                  ))}
+                                </ul>
+                                <p>
+                                  <strong>Recommendation:</strong>{" "}
+                                  {heatmapRecommendationText(zone)}
+                                </p>
+                                <button
+                                  type="button"
+                                  className={styles["schedule-btn"]}
+                                  onClick={() =>
+                                    navigate("/partner/add-training")
+                                  }
                                 >
-                                  <strong>Theme:</strong> {training.theme}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: "12px",
-                                    marginBottom: "4px",
-                                  }}
-                                >
-                                  <strong>Location:</strong>{" "}
-                                  {training.location?.city},{" "}
-                                  {training.location?.district},{" "}
-                                  {training.location?.state}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: "12px",
-                                    marginBottom: "4px",
-                                  }}
-                                >
-                                  <strong>Date:</strong>{" "}
-                                  {new Date(
-                                    training.startDate,
-                                  ).toLocaleDateString()}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: "12px",
-                                    marginBottom: "4px",
-                                  }}
-                                >
-                                  <strong>Participants:</strong>{" "}
-                                  {training.participantsCount}
-                                </div>
+                                  Schedule Training
+                                </button>
                               </div>
                             </Popup>
-                          </CircleMarker>
-                        );
-                      })}
-                  </MapContainer>
-                )}
-                {mappableLocations.length === 0 && (
-                  <div className={styles.noDataOverlay}>
-                    <p>No training locations with coordinates available</p>
-                  </div>
-                )}
+                          </Circle>
+                        ))}
+
+                      {showTrainings &&
+                        trainingsWithCoords.map((training) => {
+                          const recommendation =
+                            getTrainingRecommendation(training);
+                          const priority = recommendation?.priority || "Low";
+
+                          return (
+                            <CircleMarker
+                              key={training._id}
+                              center={[
+                                Number(training.location.latitude),
+                                Number(training.location.longitude),
+                              ]}
+                              radius={8}
+                              pathOptions={{
+                                fillColor: getColor(priority),
+                                color: "#fff",
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.95,
+                              }}
+                            >
+                              <Popup>
+                                <div style={{ minWidth: "200px" }}>
+                                  <h4
+                                    style={{
+                                      marginBottom: "8px",
+                                      fontSize: "14px",
+                                      fontWeight: "600",
+                                    }}
+                                  >
+                                    {training.title}
+                                  </h4>
+                                  <div
+                                    style={{
+                                      fontSize: "12px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    <strong>Theme:</strong> {training.theme}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "12px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    <strong>Location:</strong>{" "}
+                                    {training.location?.city},{" "}
+                                    {training.location?.district},{" "}
+                                    {training.location?.state}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "12px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    <strong>Date:</strong>{" "}
+                                    {new Date(
+                                      training.startDate,
+                                    ).toLocaleDateString()}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "12px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    <strong>Participants:</strong>{" "}
+                                    {training.participantsCount}
+                                  </div>
+                                </div>
+                              </Popup>
+                            </CircleMarker>
+                          );
+                        })}
+                    </MapContainer>
+                  )}
+                  {mappableLocations.length === 0 && (
+                    <div className={styles.noDataOverlay}>
+                      <p>No training locations with coordinates available</p>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {showFilterDrawer && (
+                <button
+                  type="button"
+                  className={styles["filter-backdrop"]}
+                  aria-label="Close filters"
+                  onClick={() => setShowFilterDrawer(false)}
+                />
+              )}
+
+              <aside
+                className={`${styles["filter-drawer"]} ${showFilterDrawer ? styles["filter-drawer-open"] : ""}`}
+                aria-hidden={!showFilterDrawer}
+              >
+                <div className={styles["filter-drawer-header"]}>
+                  <h4>Filters</h4>
+                  <button
+                    type="button"
+                    className={styles["filter-drawer-close-button"]}
+                    onClick={() => setShowFilterDrawer(false)}
+                    aria-label="Close filters"
+                  >
+                    x
+                  </button>
+                </div>
+
+                <div className={styles["filter-drawer-body"]}>
+                  <div className={styles["filter-drawer-field"]}>
+                    <label>Disaster Type</label>
+                    <select
+                      value={selectedDisaster}
+                      onChange={(e) => setSelectedDisaster(e.target.value)}
+                      className={styles["filter-select"]}
+                    >
+                      {DISASTER_OPTIONS.map((disaster) => (
+                        <option key={disaster} value={disaster}>
+                          {disaster}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles["filter-drawer-field"]}>
+                    <label>Status</label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
+                      className={styles["filter-select"]}
+                    >
+                      <option value="all">All Status</option>
+                      <option value="approved">Approved</option>
+                      <option value="pending">Pending</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+
+                  <div className={styles["filter-drawer-field"]}>
+                    <label>Theme</label>
+                    <select
+                      value={filters.theme}
+                      onChange={(e) =>
+                        handleFilterChange("theme", e.target.value)
+                      }
+                      className={styles["filter-select"]}
+                    >
+                      <option value="all">All Themes</option>
+                      {themes.map((theme) => (
+                        <option key={theme} value={theme}>
+                          {theme}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles["filter-drawer-field"]}>
+                    <label>Search</label>
+                    <input
+                      type="text"
+                      placeholder="Search by title or location..."
+                      value={filters.search}
+                      onChange={(e) =>
+                        handleFilterChange("search", e.target.value)
+                      }
+                      className={styles["filter-search"]}
+                    />
+                  </div>
+
+                  <div className={styles["filter-drawer-field"]}>
+                    <label className={styles["filter-drawer-checkbox"]}>
+                      <input
+                        type="checkbox"
+                        checked={showHeatmap}
+                        onChange={(e) => setShowHeatmap(e.target.checked)}
+                      />
+                      Show Risk Heatmap
+                    </label>
+                    <label className={styles["filter-drawer-checkbox"]}>
+                      <input
+                        type="checkbox"
+                        checked={showTrainings}
+                        onChange={(e) => setShowTrainings(e.target.checked)}
+                      />
+                      Show Trainings
+                    </label>
+                  </div>
+
+                  <div className={styles["filter-drawer-count"]}>
+                    Showing {filteredTrainings.length} of {allTrainings.length}{" "}
+                    trainings
+                  </div>
+                </div>
+              </aside>
             </div>
 
             <div
@@ -764,8 +808,7 @@ export default function PartnerDashboard() {
             >
               <div className={styles["recommendation-header"]}>
                 <div>
-                  <p className={styles["section-eyebrow"]}>Priority engine</p>
-                  <h3>Recommended focus areas</h3>
+                  <h3>Training Recommendations</h3>
                 </div>
                 <div className={styles["recommendation-counters"]}>
                   <span className={styles["priority-chip-high"]}>

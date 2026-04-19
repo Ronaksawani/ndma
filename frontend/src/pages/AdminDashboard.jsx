@@ -676,6 +676,15 @@ const AdminDashboard = () => {
                   )}
                 </div>
 
+                {showFilterDrawer && (
+                  <button
+                    type="button"
+                    className={styles.filterBackdrop}
+                    aria-label="Close filters"
+                    onClick={() => setShowFilterDrawer(false)}
+                  />
+                )}
+
                 <aside
                   className={`${styles.filterDrawer} ${showFilterDrawer ? styles.filterDrawerOpen : ""}`}
                   aria-hidden={!showFilterDrawer}
@@ -777,7 +786,7 @@ const AdminDashboard = () => {
                           checked={showHeatmap}
                           onChange={(e) => setShowHeatmap(e.target.checked)}
                         />
-                        Show Heatmap
+                        Show Risk Heatmap
                       </label>
                       <label className={styles.filterDrawerCheckbox}>
                         <input
@@ -795,8 +804,7 @@ const AdminDashboard = () => {
               <div className={styles.recommendationSection}>
                 <div className={styles.recommendationHeader}>
                   <div>
-                    <p className={styles.sectionEyebrow}>Priority engine</p>
-                    <h3>Disaster response recommendations</h3>
+                    <h3>Training Recommendations</h3>
                   </div>
                   <div className={styles.recommendationCounters}>
                     <span className={styles.priorityChipHigh}>

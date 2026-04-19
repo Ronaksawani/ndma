@@ -369,7 +369,7 @@
   border-radius: 6px;
   background: #fff;
   color: #0f172a;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   height: 28px;
 }
 
@@ -556,6 +556,15 @@
   border: none;
   background: rgba(15, 23, 42, 0.3);
   z-index: 1100;
+  cursor: pointer;
+}
+
+.filterBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.2);
+  z-index: 999;
   cursor: pointer;
 }
 
