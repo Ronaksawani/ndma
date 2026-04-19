@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -99,6 +99,14 @@ const AdminDashboard = () => {
   const [selectedDisaster, setSelectedDisaster] = useState("Earthquake");
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showTrainings, setShowTrainings] = useState(true);
+  const [recommendationStateFilter, setRecommendationStateFilter] =
+    useState("all");
+  const [showRecommendationFilterDrawer, setShowRecommendationFilterDrawer] =
+    useState(false);
+  const [focusedRecommendationKey, setFocusedRecommendationKey] =
+    useState(null);
+  const [isolatedZoneKey, setIsolatedZoneKey] = useState(null);
+  const mapRef = useRef(null);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -144,23 +152,84 @@ const AdminDashboard = () => {
     return lookup;
   }, [recommendations]);
 
-  const priorityRecommendations = useMemo(
+  const recommendationStates = useMemo(
     () =>
-      recommendations
-        .filter((item) => item.priority !== "Low")
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 6),
+      [
+        ...new Set(recommendations.map((item) => item.state).filter(Boolean)),
+      ].sort(),
     [recommendations],
   );
 
+  const scopedRecommendations = useMemo(
+    () =>
+      recommendations.filter(
+        (item) =>
+          recommendationStateFilter === "all" ||
+          item.state === recommendationStateFilter,
+      ),
+    [recommendations, recommendationStateFilter],
+  );
+
+  const priorityRecommendations = useMemo(() => {
+    const maxCards = 6;
+    const maxPerDisaster = 2;
+
+    const sorted = [...scopedRecommendations]
+      .filter((item) => item.priority !== "Low")
+      .sort((a, b) => b.score - a.score);
+
+    const uniqueStateDisasterRecommendations = [];
+    const seenStateDisaster = new Set();
+
+    for (const item of sorted) {
+      const pairKey = `${item.state}::${item.disaster}`;
+      if (seenStateDisaster.has(pairKey)) {
+        continue;
+      }
+
+      seenStateDisaster.add(pairKey);
+      uniqueStateDisasterRecommendations.push(item);
+    }
+
+    const picked = [];
+    const disasterCount = new Map();
+
+    for (const item of uniqueStateDisasterRecommendations) {
+      const current = disasterCount.get(item.disaster) || 0;
+      if (current >= maxPerDisaster) {
+        continue;
+      }
+
+      picked.push(item);
+      disasterCount.set(item.disaster, current + 1);
+
+      if (picked.length === maxCards) {
+        return picked;
+      }
+    }
+
+    for (const item of uniqueStateDisasterRecommendations) {
+      if (picked.length === maxCards) {
+        break;
+      }
+      if (!picked.includes(item)) {
+        picked.push(item);
+      }
+    }
+
+    return picked;
+  }, [scopedRecommendations]);
+
   const recommendationCounts = useMemo(
     () => ({
-      high: recommendations.filter((item) => item.priority === "High").length,
-      medium: recommendations.filter((item) => item.priority === "Medium")
+      high: scopedRecommendations.filter((item) => item.priority === "High")
         .length,
-      low: recommendations.filter((item) => item.priority === "Low").length,
+      medium: scopedRecommendations.filter((item) => item.priority === "Medium")
+        .length,
+      low: scopedRecommendations.filter((item) => item.priority === "Low")
+        .length,
     }),
-    [recommendations],
+    [scopedRecommendations],
   );
 
   const mappableLocations = useMemo(
@@ -333,6 +402,96 @@ const AdminDashboard = () => {
       [location.state || "", location.district || "", disaster].join("::"),
     );
   };
+
+  const highlightPopupKeywords = (text) => {
+    const keywords = [
+      selectedDisaster,
+      "No training",
+      "participants",
+      "coverage",
+      "high baseline hazard category",
+      "moderate baseline hazard category",
+      "recently",
+      "months",
+      "weeks",
+      "month",
+      "quarter",
+      "HIGH",
+      "MEDIUM",
+      "LOW",
+    ]
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+
+    const escaped = keywords.map((keyword) =>
+      keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    );
+
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+    const parts = text.split(regex).filter(Boolean);
+
+    return parts.map((part, index) => {
+      const isKeyword = keywords.some(
+        (keyword) => keyword.toLowerCase() === part.toLowerCase(),
+      );
+      const isDisasterType =
+        selectedDisaster &&
+        selectedDisaster.toLowerCase() === part.toLowerCase();
+
+      return isKeyword ? (
+        <span
+          key={`${part}-${index}`}
+          className={
+            isDisasterType ? styles.popupDisasterKeyword : styles.popupKeyword
+          }
+        >
+          {part}
+        </span>
+      ) : (
+        <span key={`${part}-${index}`}>{part}</span>
+      );
+    });
+  };
+
+  const visibleHeatmapZones = useMemo(() => {
+    if (!isolatedZoneKey) {
+      return heatmapZones;
+    }
+
+    const isolatedZone = heatmapZones.find(
+      (zone) => zone.key === isolatedZoneKey,
+    );
+    return isolatedZone ? [isolatedZone] : heatmapZones;
+  }, [heatmapZones, isolatedZoneKey]);
+
+  const getZoneKeyFromRecommendation = (item) =>
+    `${item.disaster}::${item.state}::${item.district}`;
+
+  const handleRecommendationClick = (item) => {
+    const zoneKey = getZoneKeyFromRecommendation(item);
+    setShowHeatmap(true);
+    setShowTrainings(false);
+    setSelectedDisaster(item.disaster);
+    setIsolatedZoneKey(zoneKey);
+    setFocusedRecommendationKey(zoneKey);
+  };
+
+  useEffect(() => {
+    if (!focusedRecommendationKey || !mapRef.current) {
+      return;
+    }
+
+    const zone = heatmapZones.find(
+      (item) => item.key === focusedRecommendationKey,
+    );
+
+    if (!zone) {
+      return;
+    }
+
+    const map = mapRef.current;
+    map.flyTo(zone.center, Math.max(map.getZoom(), 7), { duration: 0.8 });
+  }, [focusedRecommendationKey, heatmapZones]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -528,26 +687,6 @@ const AdminDashboard = () => {
                 <div className={styles.mapHeader}>
                   <h3>Training Locations</h3>
                   <div className={styles.mapHeaderActions}>
-                    <div className={styles.legend}>
-                      <div className={styles.legendItem}>
-                        <span
-                          className={`${styles.legendDot} ${styles.high}`}
-                        ></span>
-                        <span>High</span>
-                      </div>
-                      <div className={styles.legendItem}>
-                        <span
-                          className={`${styles.legendDot} ${styles.medium}`}
-                        ></span>
-                        <span>Medium</span>
-                      </div>
-                      <div className={styles.legendItem}>
-                        <span
-                          className={`${styles.legendDot} ${styles.low}`}
-                        ></span>
-                        <span>Low</span>
-                      </div>
-                    </div>
                     <button
                       type="button"
                       className={styles.filterToggleButton}
@@ -564,6 +703,9 @@ const AdminDashboard = () => {
                   <MapContainer
                     center={[20.5937, 78.9629]}
                     zoom={4}
+                    whenCreated={(mapInstance) => {
+                      mapRef.current = mapInstance;
+                    }}
                     className={styles.mapContainer}
                   >
                     <TileLayer
@@ -571,9 +713,27 @@ const AdminDashboard = () => {
                       attribution="&copy; OpenStreetMap contributors"
                     />
                     {showHeatmap &&
-                      heatmapZones.map((zone) => (
+                      visibleHeatmapZones.map((zone) => (
                         <Circle
                           key={zone.key}
+                          eventHandlers={{
+                            add: (e) => {
+                              if (zone.key !== focusedRecommendationKey) {
+                                return;
+                              }
+
+                              e.target.openPopup();
+
+                              if (mapRef.current) {
+                                mapRef.current.panTo(zone.center, {
+                                  animate: true,
+                                  duration: 0.35,
+                                });
+                              }
+
+                              setFocusedRecommendationKey(null);
+                            },
+                          }}
                           center={zone.center}
                           radius={zone.riskScore * 500}
                           pathOptions={{
@@ -605,16 +765,20 @@ const AdminDashboard = () => {
                               </p>
                               <ul>
                                 {zone.reasons.map((reason, idx) => (
-                                  <li key={idx}>{reason}</li>
+                                  <li key={idx}>
+                                    {highlightPopupKeywords(reason)}
+                                  </li>
                                 ))}
                               </ul>
                               <p>
                                 <strong>Recommendation:</strong>{" "}
-                                {zone.riskLevel === "HIGH"
-                                  ? `Conduct ${selectedDisaster} training within 2 weeks.`
-                                  : zone.riskLevel === "MEDIUM"
-                                    ? `Plan ${selectedDisaster} training within 1 month.`
-                                    : `Maintain periodic ${selectedDisaster} drills every quarter.`}
+                                {highlightPopupKeywords(
+                                  zone.riskLevel === "HIGH"
+                                    ? `Conduct ${selectedDisaster} training within 2 weeks.`
+                                    : zone.riskLevel === "MEDIUM"
+                                      ? `Plan ${selectedDisaster} training within 1 month.`
+                                      : `Maintain periodic ${selectedDisaster} drills every quarter.`,
+                                )}
                               </p>
                             </div>
                           </Popup>
@@ -746,20 +910,6 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className={styles.filterDrawerField}>
-                      <label>Disaster Type</label>
-                      <select
-                        value={selectedDisaster}
-                        onChange={(e) => setSelectedDisaster(e.target.value)}
-                      >
-                        {DISASTER_OPTIONS.map((disaster) => (
-                          <option key={disaster} value={disaster}>
-                            {disaster}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className={styles.filterDrawerField}>
                       <label>Theme</label>
                       <select
                         value={filters.theme}
@@ -783,14 +933,6 @@ const AdminDashboard = () => {
                       <label className={styles.filterDrawerCheckbox}>
                         <input
                           type="checkbox"
-                          checked={showHeatmap}
-                          onChange={(e) => setShowHeatmap(e.target.checked)}
-                        />
-                        Show Risk Heatmap
-                      </label>
-                      <label className={styles.filterDrawerCheckbox}>
-                        <input
-                          type="checkbox"
                           checked={showTrainings}
                           onChange={(e) => setShowTrainings(e.target.checked)}
                         />
@@ -803,26 +945,111 @@ const AdminDashboard = () => {
 
               <div className={styles.recommendationSection}>
                 <div className={styles.recommendationHeader}>
-                  <div>
-                    <h3>Training Recommendations</h3>
-                  </div>
-                  <div className={styles.recommendationCounters}>
-                    <span className={styles.priorityChipHigh}>
-                      High {recommendationCounts.high}
-                    </span>
-                    <span className={styles.priorityChipMedium}>
-                      Medium {recommendationCounts.medium}
-                    </span>
-                    <span className={styles.priorityChipLow}>
-                      Low {recommendationCounts.low}
-                    </span>
-                  </div>
+                  <h3>Training Recommendations</h3>
+                  <button
+                    type="button"
+                    className={styles.recommendationFilterToggleButton}
+                    onClick={() =>
+                      setShowRecommendationFilterDrawer((prev) => !prev)
+                    }
+                    aria-expanded={showRecommendationFilterDrawer}
+                    aria-label="Toggle recommendation filters"
+                  >
+                    <FiFilter />
+                  </button>
                 </div>
+
+                {showRecommendationFilterDrawer && (
+                  <button
+                    type="button"
+                    className={styles.recommendationFilterBackdrop}
+                    aria-label="Close recommendation filters"
+                    onClick={() => setShowRecommendationFilterDrawer(false)}
+                  />
+                )}
+
+                <aside
+                  className={`${styles.recommendationFilterDrawer} ${showRecommendationFilterDrawer ? styles.recommendationFilterDrawerOpen : ""}`}
+                  aria-hidden={!showRecommendationFilterDrawer}
+                >
+                  <div className={styles.recommendationFilterDrawerHeader}>
+                    <h4>Recommendation Filters</h4>
+                    <button
+                      type="button"
+                      className={styles.recommendationFilterDrawerCloseButton}
+                      onClick={() => setShowRecommendationFilterDrawer(false)}
+                      aria-label="Close recommendation filters"
+                    >
+                      x
+                    </button>
+                  </div>
+
+                  <div className={styles.recommendationFilterDrawerBody}>
+                    <div className={styles.recommendationFilterDrawerField}>
+                      <label htmlFor="admin-recommendation-state-filter">
+                        State
+                      </label>
+                      <select
+                        id="admin-recommendation-state-filter"
+                        value={recommendationStateFilter}
+                        onChange={(e) =>
+                          setRecommendationStateFilter(e.target.value)
+                        }
+                      >
+                        <option value="all">All States</option>
+                        {recommendationStates.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.recommendationFilterDrawerField}>
+                      <label>Disaster Type</label>
+                      <select
+                        value={selectedDisaster}
+                        onChange={(e) => setSelectedDisaster(e.target.value)}
+                      >
+                        {DISASTER_OPTIONS.map((disaster) => (
+                          <option key={disaster} value={disaster}>
+                            {disaster}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.recommendationFilterDrawerField}>
+                      <label
+                        className={styles.recommendationFilterDrawerCheckbox}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={showHeatmap}
+                          onChange={(e) => setShowHeatmap(e.target.checked)}
+                        />
+                        Show Risk Heatmap
+                      </label>
+                    </div>
+                  </div>
+                </aside>
 
                 <div className={styles.recommendationGrid}>
                   {priorityRecommendations.length > 0 ? (
                     priorityRecommendations.map((item) => (
-                      <div key={item.key} className={styles.recommendationCard}>
+                      <div
+                        key={item.key}
+                        className={`${styles.recommendationCard} ${styles.recommendationCardClickable}`}
+                        onClick={() => handleRecommendationClick(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleRecommendationClick(item);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                      >
                         <div className={styles.recommendationCardHeader}>
                           <div>
                             <p className={styles.recommendationLocation}>
@@ -837,7 +1064,8 @@ const AdminDashboard = () => {
                           </span>
                         </div>
                         <p className={styles.recommendationMeta}>
-                          {item.disaster} risk • score {item.score.toFixed(1)}
+                          <strong>{item.disaster}</strong> risk • score{" "}
+                          {item.score.toFixed(1)}
                         </p>
                       </div>
                     ))

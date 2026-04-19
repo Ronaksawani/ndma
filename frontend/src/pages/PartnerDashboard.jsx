@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { FiBarChart2, FiCheck, FiClock, FiFilter, FiMap } from "react-icons/fi";
 import {
   MapContainer,
@@ -100,6 +100,14 @@ export default function PartnerDashboard() {
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showTrainings, setShowTrainings] = useState(true);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+  const [showRecommendationFilterDrawer, setShowRecommendationFilterDrawer] =
+    useState(false);
+  const [recommendationStateFilter, setRecommendationStateFilter] =
+    useState("all");
+  const [focusedRecommendationKey, setFocusedRecommendationKey] =
+    useState(null);
+  const [isolatedZoneKey, setIsolatedZoneKey] = useState(null);
+  const mapRef = useRef(null);
 
   const themes = [
     "Flood Management",
@@ -136,22 +144,73 @@ export default function PartnerDashboard() {
     return lookup;
   }, [recommendations]);
 
-  const topRecommendations = useMemo(() => {
-    return recommendations
-      .filter((item) => item.priority !== "Low")
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-  }, [recommendations]);
-
-  const recommendationCounts = useMemo(
-    () => ({
-      high: recommendations.filter((item) => item.priority === "High").length,
-      medium: recommendations.filter((item) => item.priority === "Medium")
-        .length,
-      low: recommendations.filter((item) => item.priority === "Low").length,
-    }),
+  const recommendationStates = useMemo(
+    () =>
+      [
+        ...new Set(recommendations.map((item) => item.state).filter(Boolean)),
+      ].sort(),
     [recommendations],
   );
+
+  const scopedRecommendations = useMemo(
+    () =>
+      recommendations.filter(
+        (item) =>
+          recommendationStateFilter === "all" ||
+          item.state === recommendationStateFilter,
+      ),
+    [recommendations, recommendationStateFilter],
+  );
+
+  const topRecommendations = useMemo(() => {
+    const maxCards = 5;
+    const maxPerDisaster = 2;
+
+    const sorted = [...scopedRecommendations]
+      .filter((item) => item.priority !== "Low")
+      .sort((a, b) => b.score - a.score);
+
+    const uniqueStateDisasterRecommendations = [];
+    const seenStateDisaster = new Set();
+
+    for (const item of sorted) {
+      const pairKey = `${item.state}::${item.disaster}`;
+      if (seenStateDisaster.has(pairKey)) {
+        continue;
+      }
+
+      seenStateDisaster.add(pairKey);
+      uniqueStateDisasterRecommendations.push(item);
+    }
+
+    const picked = [];
+    const disasterCount = new Map();
+
+    for (const item of uniqueStateDisasterRecommendations) {
+      const current = disasterCount.get(item.disaster) || 0;
+      if (current >= maxPerDisaster) {
+        continue;
+      }
+
+      picked.push(item);
+      disasterCount.set(item.disaster, current + 1);
+
+      if (picked.length === maxCards) {
+        return picked;
+      }
+    }
+
+    for (const item of uniqueStateDisasterRecommendations) {
+      if (picked.length === maxCards) {
+        break;
+      }
+      if (!picked.includes(item)) {
+        picked.push(item);
+      }
+    }
+
+    return picked;
+  }, [scopedRecommendations]);
 
   const getTrainingRecommendation = (training) => {
     const disaster = getDisasterFromTheme(training.theme);
@@ -402,6 +461,98 @@ export default function PartnerDashboard() {
     return `Maintain periodic ${selectedDisaster} drills every quarter.`;
   };
 
+  const highlightPopupKeywords = (text) => {
+    const keywords = [
+      selectedDisaster,
+      "No training",
+      "participants",
+      "coverage",
+      "high baseline hazard category",
+      "moderate baseline hazard category",
+      "recently",
+      "months",
+      "weeks",
+      "month",
+      "quarter",
+      "HIGH",
+      "MEDIUM",
+      "LOW",
+    ]
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+
+    const escaped = keywords.map((keyword) =>
+      keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+    );
+
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+    const parts = text.split(regex).filter(Boolean);
+
+    return parts.map((part, index) => {
+      const isKeyword = keywords.some(
+        (keyword) => keyword.toLowerCase() === part.toLowerCase(),
+      );
+      const isDisasterType =
+        selectedDisaster &&
+        selectedDisaster.toLowerCase() === part.toLowerCase();
+
+      return isKeyword ? (
+        <span
+          key={`${part}-${index}`}
+          className={
+            isDisasterType
+              ? styles["popup-disaster-keyword"]
+              : styles["popup-keyword"]
+          }
+        >
+          {part}
+        </span>
+      ) : (
+        <span key={`${part}-${index}`}>{part}</span>
+      );
+    });
+  };
+
+  const visibleHeatmapZones = useMemo(() => {
+    if (!isolatedZoneKey) {
+      return heatmapZones;
+    }
+
+    const isolatedZone = heatmapZones.find(
+      (zone) => zone.key === isolatedZoneKey,
+    );
+    return isolatedZone ? [isolatedZone] : heatmapZones;
+  }, [heatmapZones, isolatedZoneKey]);
+
+  const getZoneKeyFromRecommendation = (item) =>
+    `${item.disaster}::${item.state}::${item.district}`;
+
+  const handleRecommendationClick = (item) => {
+    const zoneKey = getZoneKeyFromRecommendation(item);
+    setShowHeatmap(true);
+    setShowTrainings(false);
+    setSelectedDisaster(item.disaster);
+    setIsolatedZoneKey(zoneKey);
+    setFocusedRecommendationKey(zoneKey);
+  };
+
+  useEffect(() => {
+    if (!focusedRecommendationKey || !mapRef.current) {
+      return;
+    }
+
+    const zone = heatmapZones.find(
+      (item) => item.key === focusedRecommendationKey,
+    );
+
+    if (!zone) {
+      return;
+    }
+
+    const map = mapRef.current;
+    map.flyTo(zone.center, Math.max(map.getZoom(), 7), { duration: 0.8 });
+  }, [focusedRecommendationKey, heatmapZones]);
+
   return (
     <div className="layout-container">
       <Sidebar role="partner" />
@@ -486,29 +637,6 @@ export default function PartnerDashboard() {
                   <h3>Training Locations Map</h3>
                 </div>
                 <div className={styles["map-header-actions"]}>
-                  <div className={styles["map-legend"]}>
-                    <div className={styles["legend-item"]}>
-                      <span
-                        className={styles["legend-dot"]}
-                        style={{ backgroundColor: getColor("High") }}
-                      ></span>
-                      High
-                    </div>
-                    <div className={styles["legend-item"]}>
-                      <span
-                        className={styles["legend-dot"]}
-                        style={{ backgroundColor: getColor("Medium") }}
-                      ></span>
-                      Medium
-                    </div>
-                    <div className={styles["legend-item"]}>
-                      <span
-                        className={styles["legend-dot"]}
-                        style={{ backgroundColor: getColor("Low") }}
-                      ></span>
-                      Low
-                    </div>
-                  </div>
                   <button
                     type="button"
                     className={styles["filter-toggle-button"]}
@@ -543,6 +671,9 @@ export default function PartnerDashboard() {
                     <MapContainer
                       center={[20.5937, 78.9629]}
                       zoom={5}
+                      whenCreated={(mapInstance) => {
+                        mapRef.current = mapInstance;
+                      }}
                       style={{
                         height: "500px",
                         width: "100%",
@@ -554,9 +685,27 @@ export default function PartnerDashboard() {
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
                       {showHeatmap &&
-                        heatmapZones.map((zone) => (
+                        visibleHeatmapZones.map((zone) => (
                           <Circle
                             key={zone.key}
+                            eventHandlers={{
+                              add: (e) => {
+                                if (zone.key !== focusedRecommendationKey) {
+                                  return;
+                                }
+
+                                e.target.openPopup();
+
+                                if (mapRef.current) {
+                                  mapRef.current.panTo(zone.center, {
+                                    animate: true,
+                                    duration: 0.35,
+                                  });
+                                }
+
+                                setFocusedRecommendationKey(null);
+                              },
+                            }}
                             center={zone.center}
                             radius={20000 + zone.riskScore * 350}
                             pathOptions={{
@@ -580,12 +729,16 @@ export default function PartnerDashboard() {
                                 </p>
                                 <ul>
                                   {zone.reasons.map((reason) => (
-                                    <li key={reason}>{reason}</li>
+                                    <li key={reason}>
+                                      {highlightPopupKeywords(reason)}
+                                    </li>
                                   ))}
                                 </ul>
                                 <p>
                                   <strong>Recommendation:</strong>{" "}
-                                  {heatmapRecommendationText(zone)}
+                                  {highlightPopupKeywords(
+                                    heatmapRecommendationText(zone),
+                                  )}
                                 </p>
                                 <button
                                   type="button"
@@ -715,21 +868,6 @@ export default function PartnerDashboard() {
 
                 <div className={styles["filter-drawer-body"]}>
                   <div className={styles["filter-drawer-field"]}>
-                    <label>Disaster Type</label>
-                    <select
-                      value={selectedDisaster}
-                      onChange={(e) => setSelectedDisaster(e.target.value)}
-                      className={styles["filter-select"]}
-                    >
-                      {DISASTER_OPTIONS.map((disaster) => (
-                        <option key={disaster} value={disaster}>
-                          {disaster}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className={styles["filter-drawer-field"]}>
                     <label>Status</label>
                     <select
                       value={filters.status}
@@ -780,14 +918,6 @@ export default function PartnerDashboard() {
                     <label className={styles["filter-drawer-checkbox"]}>
                       <input
                         type="checkbox"
-                        checked={showHeatmap}
-                        onChange={(e) => setShowHeatmap(e.target.checked)}
-                      />
-                      Show Risk Heatmap
-                    </label>
-                    <label className={styles["filter-drawer-checkbox"]}>
-                      <input
-                        type="checkbox"
                         checked={showTrainings}
                         onChange={(e) => setShowTrainings(e.target.checked)}
                       />
@@ -807,28 +937,112 @@ export default function PartnerDashboard() {
               className={`${styles["recommendation-section"]} ${styles["recommendation-panel"]}`}
             >
               <div className={styles["recommendation-header"]}>
-                <div>
-                  <h3>Training Recommendations</h3>
-                </div>
-                <div className={styles["recommendation-counters"]}>
-                  <span className={styles["priority-chip-high"]}>
-                    High {recommendationCounts.high}
-                  </span>
-                  <span className={styles["priority-chip-medium"]}>
-                    Medium {recommendationCounts.medium}
-                  </span>
-                  <span className={styles["priority-chip-low"]}>
-                    Low {recommendationCounts.low}
-                  </span>
-                </div>
+                <h3>Training Recommendations</h3>
+                <button
+                  type="button"
+                  className={styles["recommendation-filter-toggle-button"]}
+                  onClick={() =>
+                    setShowRecommendationFilterDrawer((prev) => !prev)
+                  }
+                  aria-expanded={showRecommendationFilterDrawer}
+                  aria-label="Toggle recommendation filters"
+                >
+                  <FiFilter />
+                </button>
               </div>
+
+              {showRecommendationFilterDrawer && (
+                <button
+                  type="button"
+                  className={styles["recommendation-filter-backdrop"]}
+                  aria-label="Close recommendation filters"
+                  onClick={() => setShowRecommendationFilterDrawer(false)}
+                />
+              )}
+
+              <aside
+                className={`${styles["recommendation-filter-drawer"]} ${showRecommendationFilterDrawer ? styles["recommendation-filter-drawer-open"] : ""}`}
+                aria-hidden={!showRecommendationFilterDrawer}
+              >
+                <div className={styles["recommendation-filter-drawer-header"]}>
+                  <h4>Recommendation Filters</h4>
+                  <button
+                    type="button"
+                    className={
+                      styles["recommendation-filter-drawer-close-button"]
+                    }
+                    onClick={() => setShowRecommendationFilterDrawer(false)}
+                    aria-label="Close recommendation filters"
+                  >
+                    x
+                  </button>
+                </div>
+
+                <div className={styles["recommendation-filter-drawer-body"]}>
+                  <div className={styles["recommendation-filter-drawer-field"]}>
+                    <label htmlFor="recommendation-state-filter">State</label>
+                    <select
+                      id="recommendation-state-filter"
+                      value={recommendationStateFilter}
+                      onChange={(e) =>
+                        setRecommendationStateFilter(e.target.value)
+                      }
+                    >
+                      <option value="all">All States</option>
+                      {recommendationStates.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles["recommendation-filter-drawer-field"]}>
+                    <label>Disaster Type</label>
+                    <select
+                      value={selectedDisaster}
+                      onChange={(e) => setSelectedDisaster(e.target.value)}
+                    >
+                      {DISASTER_OPTIONS.map((disaster) => (
+                        <option key={disaster} value={disaster}>
+                          {disaster}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles["recommendation-filter-drawer-field"]}>
+                    <label
+                      className={
+                        styles["recommendation-filter-drawer-checkbox"]
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={showHeatmap}
+                        onChange={(e) => setShowHeatmap(e.target.checked)}
+                      />
+                      Show Risk Heatmap
+                    </label>
+                  </div>
+                </div>
+              </aside>
 
               <div className={styles["recommendation-grid"]}>
                 {topRecommendations.length > 0 ? (
                   topRecommendations.map((item) => (
                     <div
                       key={item.key}
-                      className={styles["recommendation-card"]}
+                      className={`${styles["recommendation-card"]} ${styles["recommendation-card-clickable"]}`}
+                      onClick={() => handleRecommendationClick(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleRecommendationClick(item);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
                     >
                       <div className={styles["recommendation-card-header"]}>
                         <div>
@@ -844,7 +1058,8 @@ export default function PartnerDashboard() {
                         </span>
                       </div>
                       <p className={styles["recommendation-meta"]}>
-                        {item.disaster} risk • score {item.score.toFixed(1)}
+                        <strong>{item.disaster}</strong> risk • score{" "}
+                        {item.score.toFixed(1)}
                       </p>
                     </div>
                   ))

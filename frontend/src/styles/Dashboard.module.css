@@ -540,6 +540,22 @@
   margin-bottom: 3px;
 }
 
+.popup-keyword {
+  color: #1d4ed8;
+  font-weight: 700;
+  background: rgba(37, 99, 235, 0.12);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.popup-disaster-keyword {
+  color: #b91c1c;
+  font-weight: 800;
+  background: rgba(220, 38, 38, 0.14);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
 .schedule-btn {
   width: 100%;
   border: none;
@@ -608,6 +624,8 @@
   padding: 1.25rem 1.5rem;
   margin-bottom: 20px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  position: relative;
+  overflow: hidden;
 }
 
 .recommendation-header {
@@ -631,6 +649,144 @@
   margin: 0;
   font-size: 1.1rem;
   color: #0f172a;
+}
+
+.recommendation-controls {
+  margin-top: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.recommendation-controls label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.recommendation-controls select {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: #fff;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.recommendation-filter-toggle-button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.recommendation-filter-toggle-button:hover {
+  background: #dbeafe;
+}
+
+.recommendation-filter-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(15, 23, 42, 0.2);
+  z-index: 999;
+  cursor: pointer;
+}
+
+.recommendation-filter-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(320px, 88%);
+  height: 100%;
+  background: rgba(255, 255, 255, 0.98);
+  border-left: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: -12px 0 24px rgba(15, 23, 42, 0.12);
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.recommendation-filter-drawer-open {
+  transform: translateX(0);
+}
+
+.recommendation-filter-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.recommendation-filter-drawer-header h4 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.recommendation-filter-drawer-close-button {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.recommendation-filter-drawer-body {
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+}
+
+.recommendation-filter-drawer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.recommendation-filter-drawer-field label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.recommendation-filter-drawer-field select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #dbe2ea;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 0.75rem;
+  height: 30px;
+}
+
+.recommendation-filter-drawer-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.recommendation-filter-drawer-checkbox input {
+  width: 13px;
+  height: 13px;
 }
 
 .recommendation-counters {
@@ -695,6 +851,25 @@
   padding: 1rem;
 }
 
+.recommendation-card-clickable {
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.recommendation-card-clickable:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.38);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+}
+
+.recommendation-card-clickable:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .recommendation-card-header {
   display: flex;
   justify-content: space-between;
@@ -710,7 +885,7 @@
 }
 
 .recommendation-card h4 {
-  margin: 0;
+  margin: 0.4rem 0 0;
   font-size: 0.98rem;
   color: #0f172a;
 }
@@ -719,6 +894,10 @@
   margin: 0.75rem 0 0 0;
   color: #475569;
   font-size: 0.85rem;
+}
+
+.recommendation-meta strong {
+  color: #1d4ed8;
 }
 
 .recommendation-empty {
