@@ -972,8 +972,7 @@ const AdminDashboard = () => {
                                   }}
                                 >
                                   {zone.riskLevel}
-                                </span>{" "}
-                                ({zone.riskScore})
+                                </span>
                               </p>
                               <p>
                                 <strong>Reasons:</strong>
@@ -1290,8 +1289,7 @@ const AdminDashboard = () => {
                           </span>
                         </div>
                         <p className={styles.recommendationMeta}>
-                          <strong>{item.disaster}</strong> risk • score{" "}
-                          {item.score.toFixed(1)}
+                          <strong>{item.disaster}</strong> risk
                         </p>
                       </div>
                     ))

@@ -1001,8 +1001,7 @@ export default function PartnerDashboard() {
                                   {zone.district}, {zone.state}
                                 </h4>
                                 <p>
-                                  <strong>Risk Level:</strong> {zone.riskLevel}{" "}
-                                  (Score: {zone.riskScore})
+                                  <strong>Risk Level:</strong> {zone.riskLevel}
                                 </p>
                                 <p>
                                   <strong>Reason:</strong>
@@ -1416,8 +1415,7 @@ export default function PartnerDashboard() {
                         </span>
                       </div>
                       <p className={styles["recommendation-meta"]}>
-                        <strong>{item.disaster}</strong> risk • score{" "}
-                        {item.score.toFixed(1)}
+                        <strong>{item.disaster}</strong> risk
                       </p>
                     </div>
                   ))
