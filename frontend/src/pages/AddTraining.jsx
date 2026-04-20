@@ -15,7 +15,7 @@ import { trainingAPI, uploadAPI } from "../utils/api";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/Form.module.css";
 
-// Fix default marker icon
+// Fix default marker icon.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
