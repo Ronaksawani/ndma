@@ -86,6 +86,27 @@ const getFallbackPoint = (state, district, index) => {
   ];
 };
 
+const isTrainingInPeriod = (trainingDate, period) => {
+  if (period === "all") return true;
+
+  const now = new Date();
+  const trainingDateObj = new Date(trainingDate);
+
+  let cutoffDate = new Date(now);
+
+  if (period === "1month") {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+  } else if (period === "3months") {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+  } else if (period === "6months") {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+  } else if (period === "1year") {
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+  }
+
+  return trainingDateObj >= cutoffDate;
+};
+
 const TRAINING_ACTIVITY_SEEN_STORAGE_KEY =
   "ndma_partner_seen_training_activities";
 
@@ -105,6 +126,7 @@ export default function PartnerDashboard() {
     status: "all",
     theme: "all",
     search: "",
+    period: "all",
   });
   const [selectedDisaster, setSelectedDisaster] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(true);
@@ -424,7 +446,11 @@ export default function PartnerDashboard() {
       training.location?.state
         ?.toLowerCase()
         .includes(filters.search.toLowerCase());
-    return matchesStatus && matchesTheme && matchesSearch;
+    const matchesPeriod = isTrainingInPeriod(
+      training.startDate,
+      filters.period,
+    );
+    return matchesStatus && matchesTheme && matchesSearch && matchesPeriod;
   });
 
   const mappableLocations = useMemo(
@@ -1177,6 +1203,23 @@ export default function PartnerDashboard() {
                           {theme}
                         </option>
                       ))}
+                    </select>
+                  </div>
+
+                  <div className={styles["filter-drawer-field"]}>
+                    <label>Period</label>
+                    <select
+                      value={filters.period}
+                      onChange={(e) =>
+                        handleFilterChange("period", e.target.value)
+                      }
+                      className={styles["filter-select"]}
+                    >
+                      <option value="all">All Time</option>
+                      <option value="1month">Last 1 Month</option>
+                      <option value="3months">Last 3 Months</option>
+                      <option value="6months">Last 6 Months</option>
+                      <option value="1year">Last 1 Year</option>
                     </select>
                   </div>
 

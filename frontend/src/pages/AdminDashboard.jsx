@@ -83,6 +83,27 @@ const getFallbackPoint = (state, district, index) => {
   ];
 };
 
+const isTrainingInPeriod = (trainingDate, period) => {
+  if (period === "all") return true;
+
+  const now = new Date();
+  const trainingDateObj = new Date(trainingDate);
+
+  let cutoffDate = new Date(now);
+
+  if (period === "1month") {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 1);
+  } else if (period === "3months") {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 3);
+  } else if (period === "6months") {
+    cutoffDate.setMonth(cutoffDate.getMonth() - 6);
+  } else if (period === "1year") {
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+  }
+
+  return trainingDateObj >= cutoffDate;
+};
+
 const RECENT_ACTIVITY_SEEN_STORAGE_KEY = "ndma_admin_seen_recent_activities";
 
 const AdminDashboard = () => {
@@ -130,6 +151,7 @@ const AdminDashboard = () => {
     status: "all",
     state: "all",
     theme: "all",
+    period: "all",
   });
 
   const themes = [
@@ -711,6 +733,13 @@ const AdminDashboard = () => {
       filtered = filtered.filter((loc) => loc.theme === filters.theme);
     }
 
+    // Filter by period
+    if (filters.period !== "all") {
+      filtered = filtered.filter((loc) =>
+        isTrainingInPeriod(loc.startDate, filters.period),
+      );
+    }
+
     setFilteredLocations(filtered);
   }, [trainingLocations, filters]);
 
@@ -1141,6 +1170,25 @@ const AdminDashboard = () => {
                             {theme}
                           </option>
                         ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.filterDrawerField}>
+                      <label>Period</label>
+                      <select
+                        value={filters.period}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            period: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="all">All Time</option>
+                        <option value="1month">Last 1 Month</option>
+                        <option value="3months">Last 3 Months</option>
+                        <option value="6months">Last 6 Months</option>
+                        <option value="1year">Last 1 Year</option>
                       </select>
                     </div>
 

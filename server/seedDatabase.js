@@ -333,5 +333,9 @@ async function seedDatabase() {
   }
 }
 
-// Run the seed function
-seedDatabase();
+// Run only when executed directly from the terminal, not when bundled by Vercel
+if (require.main === module) {
+  seedDatabase();
+}
+
+module.exports = seedDatabase;
