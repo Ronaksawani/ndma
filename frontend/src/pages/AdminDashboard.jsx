@@ -9,6 +9,7 @@ import {
 } from "react-leaflet";
 import { analyticsAPI, partnerAPI, trainingAPI } from "../utils/api";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { generateRecommendations } from "../utils/generateRecommendations";
 import { getColor, getDisasterFromTheme } from "../utils/recommendationEngine";
 import styles from "../styles/AdminDashboard.module.css";
@@ -704,10 +705,6 @@ const AdminDashboard = () => {
   }, [focusedRecommendationKey, heatmapZones]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem(
       RECENT_ACTIVITY_SEEN_STORAGE_KEY,
       JSON.stringify(seenRecentActivityKeys),
@@ -809,6 +806,25 @@ const AdminDashboard = () => {
     }
   };
 
+  useEffect(() => {
+    fetchDashboardData();
+
+    const refreshInterval = setInterval(() => {
+      fetchDashboardData();
+    }, 60000);
+
+    const handleWindowFocus = () => {
+      fetchDashboardData();
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, []);
+
   const getTimeAgo = (date) => {
     const now = new Date();
     const diffMs = now - new Date(date);
@@ -842,6 +858,7 @@ const AdminDashboard = () => {
       <div className={styles.adminLayout}>
         <Sidebar role="admin" />
         <div className={styles.dashboardContainer}>
+          <PageTopBar title="NDMA Admin Dashboard" />
           <div className={styles.loadingState}>
             <p>Loading dashboard...</p>
           </div>
@@ -854,28 +871,11 @@ const AdminDashboard = () => {
     <div className={styles.adminLayout}>
       <Sidebar role="admin" />
       <div className={styles.dashboardContainer}>
-        {/* Top Bar */}
-        <div className={styles.topBar}>
-          <h2 className={styles.topBarTitle}>NDMA Admin Dashboard</h2>
-          <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.notificationButton}
-              title="Recent activities"
-              onClick={() => setShowActivitiesPanel((prev) => !prev)}
-            >
-              <FiBell />
-              {unreadRecentActivitiesCount > 0 && (
-                <span className={styles.notificationCount}>
-                  {Math.min(unreadRecentActivitiesCount, 9)}
-                </span>
-              )}
-              <span className={styles.notificationTooltip}>
-                Recent Activities
-              </span>
-            </button>
-          </div>
-        </div>
+        <PageTopBar
+          title="NDMA Admin Dashboard"
+          notificationCount={unreadRecentActivitiesCount}
+          onNotificationsClick={() => setShowActivitiesPanel((prev) => !prev)}
+        />
 
         <div className={styles.mainContentWrapper}>
           {error && <div className={styles.errorBanner}>{error}</div>}

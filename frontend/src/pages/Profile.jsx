@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import styles from "../styles/Dashboard.module.css";
 import statesDistrictsData from "../data/statesDistricts.json";
@@ -149,6 +150,9 @@ export default function Profile() {
     <div className="layout-container">
       <Sidebar role="partner" />
       <div className="main-content">
+        <PageTopBar
+          title={`Partner Profile Settings - ${user?.organizationName || "[Organization Name]"}`}
+        />
         <div className="top-nav">
           <h2 className="nav-title">
             Partner Profile Settings -{" "}

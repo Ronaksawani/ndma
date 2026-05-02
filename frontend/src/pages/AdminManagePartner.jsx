@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { partnerAPI, trainingAPI } from "../utils/api";
 import styles from "../styles/AdminManagePartner.module.css";
 import { FiChevronLeft } from "react-icons/fi";
@@ -106,6 +107,7 @@ const AdminManagePartner = () => {
     <div className={styles.layout}>
       <Sidebar role="admin" />
       <div className={styles.container}>
+        <PageTopBar title="Manage Partner" />
         <div className={styles.header}>
           <button
             className={styles.backButton}

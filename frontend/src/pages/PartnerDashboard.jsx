@@ -18,6 +18,7 @@ import "leaflet/dist/leaflet.css";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { trainingAPI } from "../utils/api";
 import disasterRiskData from "../data/disaster_risk_dataset_india.json";
 import districtCoordsData from "../data/district_coords.json";
@@ -847,6 +848,11 @@ export default function PartnerDashboard() {
     <div className="layout-container">
       <Sidebar role="partner" />
       <div className="main-content">
+        <PageTopBar
+          title={`Partner Dashboard - ${user?.organizationName || ""}`}
+          notificationCount={unreadTrainingActivityCount}
+          onNotificationsClick={() => setShowActivitiesPanel((prev) => !prev)}
+        />
         <div className="top-nav">
           <h2 className="nav-title">
             Partner Dashboard - {user?.organizationName}

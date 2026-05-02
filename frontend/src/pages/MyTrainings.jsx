@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiEdit2, FiEye, FiSearch } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { trainingAPI } from "../utils/api";
 import styles from "../styles/Dashboard.module.css";
 
@@ -106,6 +107,9 @@ export default function MyTrainings() {
     <div className="layout-container">
       <Sidebar role="partner" />
       <div className="main-content">
+        <PageTopBar
+          title={`My Trainings - ${user?.organizationName || "[Organization Name]"}`}
+        />
         <div className="top-nav">
           <h2 className="nav-title">
             My Trainings - {user?.organizationName || "[Organization Name]"}
