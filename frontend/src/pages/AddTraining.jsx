@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { CiCamera, CiFileOn } from "react-icons/ci";
 import {
   MapContainer,
@@ -12,6 +12,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI, uploadAPI } from "../utils/api";
+import themeOptions from "../data/themes.json";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/Form.module.css";
 
@@ -72,6 +73,8 @@ function LocationPicker({ onLocationSelect, initialLat, initialLng }) {
 
 export default function AddTraining() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const scheduledTrainingId = location.state?.scheduledTrainingId;
   const [formData, setFormData] = useState({
     title: "",
     theme: "",
@@ -91,6 +94,7 @@ export default function AddTraining() {
   const [csvFile, setCsvFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [prefillLoading, setPrefillLoading] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [currentParticipant, setCurrentParticipant] = useState({
     fullName: "",
@@ -110,6 +114,51 @@ export default function AddTraining() {
     isPhoneValid(participant.phone.trim()) &&
     isAadhaarValid(participant.aadhaarNumber.trim());
   const hasAtLeastOneParticipant = addedParticipants.length > 0;
+
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().split("T")[0];
+  };
+
+  useEffect(() => {
+    const loadScheduledTraining = async () => {
+      if (!scheduledTrainingId) return;
+      setPrefillLoading(true);
+      setError("");
+      try {
+        const response = await trainingAPI.getById(scheduledTrainingId);
+        const training = response.data;
+        setFormData((prev) => ({
+          ...prev,
+          title: training.title || "",
+          theme: training.theme || "",
+          startDate: formatDateForInput(training.startDate),
+          endDate: formatDateForInput(training.endDate),
+          state: training.location?.state || "",
+          district: training.location?.district || "",
+          city: training.location?.city || "",
+          pincode: training.location?.pincode || "",
+          latitude: training.location?.latitude || "",
+          longitude: training.location?.longitude || "",
+          trainerName: training.trainerName || "",
+          trainerEmail: training.trainerEmail || "",
+          participantsCount: training.participantsCount || "",
+        }));
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            "Failed to load scheduled training details",
+        );
+      } finally {
+        setPrefillLoading(false);
+      }
+    };
+
+    loadScheduledTraining();
+  }, [scheduledTrainingId]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     // Reset district when state changes
@@ -257,8 +306,16 @@ export default function AddTraining() {
         attendanceSheet: attendanceSheetData,
       };
 
-      await trainingAPI.create(payload);
-      alert("Training event submitted successfully!");
+      if (scheduledTrainingId) {
+        await trainingAPI.submitScheduledForApproval(
+          scheduledTrainingId,
+          payload,
+        );
+        alert("Scheduled training submitted for approval successfully!");
+      } else {
+        await trainingAPI.create(payload);
+        alert("Training event submitted successfully!");
+      }
       navigate("/partner/my-trainings");
     } catch (err) {
       setError(
@@ -277,19 +334,30 @@ export default function AddTraining() {
       <Sidebar role="partner" />
       <div className="main-content">
         <div className="top-nav">
-          <h2 className="nav-title">Add New Training Event</h2>
+          <h2 className="nav-title">
+            {scheduledTrainingId
+              ? "Submit Scheduled Training for Approval"
+              : "Add New Training Event"}
+          </h2>
         </div>
 
         <div className="page-content">
           <div className={styles["form-container"]}>
             <div className={styles["form-card"]}>
               {error && <div className="alert alert-danger">{error}</div>}
+              {prefillLoading && (
+                <div className="alert alert-info">
+                  Loading scheduled training...
+                </div>
+              )}
 
               <form onSubmit={handleSubmit}>
                 {/* Event Details */}
                 <div className={styles["form-section"]}>
                   <h3 className={styles["form-section-title"]}>
-                    Submit New Training Event
+                    {scheduledTrainingId
+                      ? "Review and Submit for Approval"
+                      : "Submit New Training Event"}
                   </h3>
 
                   <div className={styles["form-row"]}>
@@ -313,17 +381,11 @@ export default function AddTraining() {
                         required
                       >
                         <option value="">Select Theme</option>
-                        <option value="Flood Management">
-                          Flood Management
-                        </option>
-                        <option value="Earthquake Safety">
-                          Earthquake Safety
-                        </option>
-                        <option value="Cyclone Management">
-                          Cyclone Management
-                        </option>
-                        <option value="First Aid">First Aid</option>
-                        <option value="Fire Safety">Fire Safety</option>
+                        {themeOptions.map((theme) => (
+                          <option key={theme.value} value={theme.value}>
+                            {theme.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>

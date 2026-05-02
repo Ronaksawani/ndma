@@ -5,20 +5,18 @@ import {
   FiUsers,
   FiCalendar,
   FiDownload,
-  FiFilter,
   FiPieChart,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI } from "../utils/api";
+import themeOptions from "../data/themes.json";
 import styles from "../styles/Reports.module.css";
 
 export default function PartnerReports() {
   const { user } = useAuth();
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState("all");
-  const [selectedTheme, setSelectedTheme] = useState("all");
 
   useEffect(() => {
     fetchData();
@@ -26,7 +24,9 @@ export default function PartnerReports() {
 
   const fetchData = async () => {
     try {
-      const response = await trainingAPI.getAll({ partnerId: user?.organizationId });
+      const response = await trainingAPI.getAll({
+        partnerId: user?.organizationId,
+      });
       const data = response.data.trainings || [];
       setTrainings(data);
     } catch (error) {
@@ -36,32 +36,7 @@ export default function PartnerReports() {
     }
   };
 
-  // Filter trainings based on date range
-  const filterByDate = (training) => {
-    if (dateRange === "all") return true;
-    const trainingDate = new Date(training.startDate);
-    const now = new Date();
-    const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
-    const threeMonthsAgo = new Date(now.setMonth(now.getMonth() - 3));
-    const yearAgo = new Date(now.setFullYear(now.getFullYear() - 1));
-
-    switch (dateRange) {
-      case "month":
-        return trainingDate >= monthAgo;
-      case "quarter":
-        return trainingDate >= threeMonthsAgo;
-      case "year":
-        return trainingDate >= yearAgo;
-      default:
-        return true;
-    }
-  };
-
-  const filteredTrainings = trainings.filter((t) => {
-    const matchesDate = filterByDate(t);
-    const matchesTheme = selectedTheme === "all" || t.theme === selectedTheme;
-    return matchesDate && matchesTheme;
-  });
+  const filteredTrainings = trainings;
 
   // Calculate statistics
   const stats = {
@@ -124,14 +99,6 @@ export default function PartnerReports() {
     return acc;
   }, {});
 
-  const themes = [
-    "Flood Management",
-    "Earthquake Safety",
-    "Cyclone Management",
-    "First Aid",
-    "Fire Safety",
-  ];
-
   const handleExport = () => {
     // Create CSV data
     const headers = [
@@ -183,42 +150,6 @@ export default function PartnerReports() {
         </div>
 
         <div className="page-content">
-          {/* Filters */}
-          <div className={styles["filter-section"]}>
-            <div className={styles["filter-group"]}>
-              <FiFilter size={16} />
-              <span className={styles["filter-label"]}>Filters:</span>
-            </div>
-            <div className={styles["filter-group"]}>
-              <label>Time Period:</label>
-              <select
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-                className={styles["filter-select"]}
-              >
-                <option value="all">All Time</option>
-                <option value="month">Last Month</option>
-                <option value="quarter">Last 3 Months</option>
-                <option value="year">Last Year</option>
-              </select>
-            </div>
-            <div className={styles["filter-group"]}>
-              <label>Theme:</label>
-              <select
-                value={selectedTheme}
-                onChange={(e) => setSelectedTheme(e.target.value)}
-                className={styles["filter-select"]}
-              >
-                <option value="all">All Themes</option>
-                {themes.map((theme) => (
-                  <option key={theme} value={theme}>
-                    {theme}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           {/* Summary Stats */}
           <div className={styles["stats-grid"]}>
             <div className={styles["stat-card"]}>

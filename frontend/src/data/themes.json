@@ -1,0 +1,42 @@
+[
+  {
+    "label": "Flood",
+    "value": "Flood Management",
+    "emoji": "🌊"
+  },
+  {
+    "label": "Cyclone",
+    "value": "Cyclone Management",
+    "emoji": "🌪️"
+  },
+  {
+    "label": "Earthquake",
+    "value": "Earthquake Safety",
+    "emoji": "🌍"
+  },
+  {
+    "label": "Drought",
+    "value": "Drought",
+    "emoji": "☀️"
+  },
+  {
+    "label": "Landslide",
+    "value": "Landslide Management",
+    "emoji": "⛰️"
+  },
+  {
+    "label": "Heatwave",
+    "value": "Heatwave",
+    "emoji": "🌡️"
+  },
+  {
+    "label": "First Aid",
+    "value": "First Aid",
+    "emoji": "🏥"
+  },
+  {
+    "label": "Fire Safety",
+    "value": "Fire Safety",
+    "emoji": "🔥"
+  }
+]

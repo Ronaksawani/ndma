@@ -27,8 +27,13 @@ export const authAPI = {
 export const trainingAPI = {
   getAll: (filters = {}) => api.get("/trainings", { params: filters }),
   getById: (id) => api.get(`/trainings/${id}`),
-  getByPartnerId: (partnerId) => api.get("/trainings", { params: { partnerId } }),
+  getByPartnerId: (partnerId) =>
+    api.get("/trainings", { params: { partnerId } }),
   create: (data) => api.post("/trainings", data),
+  createScheduled: (data) => api.post("/trainings/schedule", data),
+  submitScheduledForApproval: (id, data) =>
+    api.patch(`/trainings/${id}/submit-for-approval`, data),
+  cancelScheduled: (id) => api.patch(`/trainings/${id}/cancel-scheduled`),
   update: (id, data) => api.put(`/trainings/${id}`, data),
   delete: (id) => api.delete(`/trainings/${id}`),
   updateStatus: (id, status, reason = "") =>

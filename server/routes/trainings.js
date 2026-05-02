@@ -103,9 +103,9 @@ router.get("/:id", async (req, res) => {
 router.post("/admin/create", auth, async (req, res) => {
   try {
     if (req.user.role !== "admin") {
-      return res
-        .status(403)
-        .json({ message: "Only admins can create trainings via this endpoint" });
+      return res.status(403).json({
+        message: "Only admins can create trainings via this endpoint",
+      });
     }
 
     const {
@@ -119,8 +119,10 @@ router.post("/admin/create", auth, async (req, res) => {
       city,
       latitude,
       longitude,
+      address,
       trainerName,
       trainerEmail,
+      trainerContactNo,
       participantsCount,
       government = 0,
       ngo = 0,
@@ -149,10 +151,11 @@ router.post("/admin/create", auth, async (req, res) => {
         city,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
-        address: `${city}, ${state}`,
+        address: address || `${city}, ${state}`,
       },
       trainerName,
       trainerEmail,
+      trainerContactNo,
       participantsCount: parseInt(participantsCount) || 0,
       participantBreakdown: {
         government: parseInt(government) || 0,
@@ -191,9 +194,11 @@ router.post("/", auth, async (req, res) => {
     // Get the partner's organization ID
     const Partner = require("../models/Partner");
     const partner = await Partner.findOne({ userId: req.user.userId });
-    
+
     if (!partner) {
-      return res.status(404).json({ message: "Partner organization not found" });
+      return res
+        .status(404)
+        .json({ message: "Partner organization not found" });
     }
 
     const {
@@ -206,8 +211,10 @@ router.post("/", auth, async (req, res) => {
       city,
       latitude,
       longitude,
+      address,
       trainerName,
       trainerEmail,
+      trainerContactNo,
       participantsCount,
       photos,
       attendanceSheet,
@@ -225,10 +232,12 @@ router.post("/", auth, async (req, res) => {
         city,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
+        address: address || `${city}, ${state}`,
       },
       trainerName,
       trainerEmail,
-      participantsCount: parseInt(participantsCount),
+      trainerContactNo,
+      participantsCount: parseInt(participantsCount) || 0,
       partnerId: partner._id,
       status: "pending",
     });
@@ -317,6 +326,310 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
+// Create scheduled training (partner only, status=upcoming)
+router.post("/schedule", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "partner") {
+      return res
+        .status(403)
+        .json({ message: "Only partners can schedule trainings" });
+    }
+
+    const Partner = require("../models/Partner");
+    const partner = await Partner.findOne({ userId: req.user.userId });
+
+    if (!partner) {
+      return res
+        .status(404)
+        .json({ message: "Partner organization not found" });
+    }
+
+    const {
+      title,
+      theme,
+      startDate,
+      endDate,
+      state,
+      district,
+      city,
+      latitude,
+      longitude,
+      address,
+      trainerName,
+      trainerEmail,
+      trainerContactNo,
+      participantsCount,
+    } = req.body;
+
+    if (!title || !theme || !startDate || !endDate || !state || !district) {
+      return res.status(400).json({
+        message: "Missing required fields for scheduled training",
+      });
+    }
+
+    const training = new TrainingEvent({
+      title,
+      theme,
+      startDate,
+      endDate,
+      location: {
+        state,
+        district,
+        city,
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
+        address: address || [city, district, state].filter(Boolean).join(", "),
+      },
+      trainerName,
+      trainerEmail,
+      trainerContactNo,
+      participantsCount: parseInt(participantsCount, 10) || 0,
+      partnerId: partner._id,
+      status: "upcoming",
+    });
+
+    await training.save();
+
+    res.status(201).json({
+      message: "Training scheduled successfully",
+      training,
+    });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Failed to schedule training", error: error.message });
+  }
+});
+
+// Submit scheduled training for approval (partner owner only)
+router.patch("/:id/submit-for-approval", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "partner") {
+      return res
+        .status(403)
+        .json({ message: "Only partners can submit trainings for approval" });
+    }
+
+    const Partner = require("../models/Partner");
+    const partner = await Partner.findOne({ userId: req.user.userId });
+    if (!partner) {
+      return res
+        .status(404)
+        .json({ message: "Partner organization not found" });
+    }
+
+    const training = await TrainingEvent.findById(req.params.id);
+    if (!training) {
+      return res.status(404).json({ message: "Training not found" });
+    }
+
+    if (training.partnerId.toString() !== partner._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this training" });
+    }
+
+    if (training.status !== "upcoming") {
+      return res.status(400).json({
+        message: "Only upcoming trainings can be submitted for approval",
+      });
+    }
+
+    const {
+      title,
+      theme,
+      startDate,
+      endDate,
+      state,
+      district,
+      city,
+      latitude,
+      longitude,
+      address,
+      trainerName,
+      trainerEmail,
+      trainerContactNo,
+      participantsCount,
+      photos,
+      attendanceSheet,
+      participants,
+    } = req.body;
+
+    if (title) training.title = title;
+    if (theme) training.theme = theme;
+    if (startDate) training.startDate = startDate;
+    if (endDate) training.endDate = endDate;
+    if (trainerName !== undefined) training.trainerName = trainerName;
+    if (trainerEmail !== undefined) training.trainerEmail = trainerEmail;
+    if (trainerContactNo !== undefined)
+      training.trainerContactNo = trainerContactNo;
+    if (participantsCount !== undefined)
+      training.participantsCount = parseInt(participantsCount, 10) || 0;
+
+    if (
+      state !== undefined ||
+      district !== undefined ||
+      city !== undefined ||
+      latitude !== undefined ||
+      longitude !== undefined ||
+      address !== undefined
+    ) {
+      training.location = {
+        state: state !== undefined ? state : training.location?.state,
+        district:
+          district !== undefined ? district : training.location?.district,
+        city: city !== undefined ? city : training.location?.city,
+        latitude:
+          latitude !== undefined
+            ? parseFloat(latitude)
+            : training.location?.latitude,
+        longitude:
+          longitude !== undefined
+            ? parseFloat(longitude)
+            : training.location?.longitude,
+        address: address !== undefined ? address : training.location?.address,
+      };
+    }
+
+    if (photos !== undefined) {
+      try {
+        const photoArray =
+          typeof photos === "string" ? JSON.parse(photos) : photos;
+        training.photos = photoArray.map((photo) => ({
+          url: photo.url,
+          filename: photo.filename || photo.publicId || "photo",
+        }));
+      } catch (e) {
+        console.log("Photos parsing error:", e.message);
+      }
+    }
+
+    if (attendanceSheet !== undefined) {
+      try {
+        if (attendanceSheet === null) {
+          training.attendanceSheet = null;
+        } else {
+          const sheetData =
+            typeof attendanceSheet === "string"
+              ? JSON.parse(attendanceSheet)
+              : attendanceSheet;
+          training.attendanceSheet = {
+            url: sheetData.url,
+            filename: sheetData.filename || "attendance",
+          };
+        }
+      } catch (e) {
+        console.log("Attendance sheet parsing error:", e.message);
+      }
+    }
+
+    training.status = "pending";
+    training.rejectionReason = undefined;
+    training.approvedAt = undefined;
+    training.approvedBy = undefined;
+
+    await training.save();
+
+    if (participants) {
+      try {
+        const participantsArray =
+          typeof participants === "string"
+            ? JSON.parse(participants)
+            : participants;
+        const db = require("mongoose").connection;
+        const partnerDoc = await Partner.findOne({ userId: req.user.userId });
+        const organizationName =
+          partnerDoc?.organizationName || "Training Organization";
+
+        await db
+          .collection("participants")
+          .deleteMany({ trainingId: training._id });
+
+        const participantDocs = participantsArray.map((participant) => ({
+          ...participant,
+          trainingId: training._id,
+          trainingTitle: training.title,
+          trainingTheme: training.theme,
+          trainingDates: {
+            start: training.startDate,
+            end: training.endDate,
+          },
+          organization: organizationName,
+          certificateIssued: true,
+          certificateIssuedAt: new Date(),
+          createdAt: new Date(),
+        }));
+
+        if (participantDocs.length > 0) {
+          await db.collection("participants").insertMany(participantDocs);
+        }
+      } catch (e) {
+        console.log("Participants update error:", e.message);
+      }
+    }
+
+    res.json({
+      message: "Training submitted for approval successfully",
+      training,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to submit training for approval",
+      error: error.message,
+    });
+  }
+});
+
+// Cancel scheduled training (partner owner only)
+router.patch("/:id/cancel-scheduled", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "partner") {
+      return res
+        .status(403)
+        .json({ message: "Only partners can cancel scheduled trainings" });
+    }
+
+    const Partner = require("../models/Partner");
+    const partner = await Partner.findOne({ userId: req.user.userId });
+    if (!partner) {
+      return res
+        .status(404)
+        .json({ message: "Partner organization not found" });
+    }
+
+    const training = await TrainingEvent.findById(req.params.id);
+    if (!training) {
+      return res.status(404).json({ message: "Training not found" });
+    }
+
+    if (training.partnerId.toString() !== partner._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this training" });
+    }
+
+    if (training.status !== "upcoming") {
+      return res.status(400).json({
+        message: "Only upcoming scheduled trainings can be canceled",
+      });
+    }
+
+    training.status = "canceled";
+    await training.save();
+
+    res.json({
+      message: "Scheduled training canceled successfully",
+      training,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to cancel scheduled training",
+      error: error.message,
+    });
+  }
+});
+
 // Update training (partner owner or admin)
 router.put("/:id", auth, async (req, res) => {
   try {
@@ -329,8 +642,11 @@ router.put("/:id", auth, async (req, res) => {
     if (req.user.role !== "admin") {
       const Partner = require("../models/Partner");
       const partner = await Partner.findOne({ userId: req.user.userId });
-      
-      if (!partner || training.partnerId.toString() !== partner._id.toString()) {
+
+      if (
+        !partner ||
+        training.partnerId.toString() !== partner._id.toString()
+      ) {
         return res
           .status(403)
           .json({ message: "Not authorized to update this training" });

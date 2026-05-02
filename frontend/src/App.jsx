@@ -19,6 +19,7 @@ import Calendar from "./pages/Calendar";
 import Resources from "./pages/Resources";
 import PartnerDashboard from "./pages/PartnerDashboard";
 import AddTraining from "./pages/AddTraining";
+import ScheduleTraining from "./pages/ScheduleTraining";
 import EditTraining from "./pages/EditTraining";
 import ViewTraining from "./pages/ViewTraining";
 import MyTrainings from "./pages/MyTrainings";
@@ -83,6 +84,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="partner">
             <AddTraining />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/partner/schedule-training"
+        element={
+          <ProtectedRoute role="partner">
+            <ScheduleTraining />
           </ProtectedRoute>
         }
       />

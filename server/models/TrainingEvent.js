@@ -28,7 +28,11 @@ const TrainingEventSchema = new mongoose.Schema({
   },
   trainerName: String,
   trainerEmail: String,
-  participantsCount: Number,
+  trainerContactNo: String,
+  participantsCount: {
+    type: Number,
+    default: 0,
+  },
   participantBreakdown: {
     government: { type: Number, default: 0 },
     ngo: { type: Number, default: 0 },
@@ -46,7 +50,7 @@ const TrainingEventSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "approved", "rejected"],
+    enum: ["upcoming", "pending", "approved", "rejected", "canceled"],
     default: "pending",
   },
   rejectionReason: String,

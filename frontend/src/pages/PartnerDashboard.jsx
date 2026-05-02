@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI } from "../utils/api";
+import themeOptions from "../data/themes.json";
 import disasterRiskData from "../data/disaster_risk_dataset_india.json";
 import districtCoordsData from "../data/district_coords.json";
 import { generateRecommendations } from "../utils/generateRecommendations";
@@ -131,6 +132,7 @@ export default function PartnerDashboard() {
   const [selectedDisaster, setSelectedDisaster] = useState("");
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showTrainings, setShowTrainings] = useState(true);
+  const [showYourTraining, setShowYourTraining] = useState(true);
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [showRecommendationFilterDrawer, setShowRecommendationFilterDrawer] =
     useState(false);
@@ -156,14 +158,6 @@ export default function PartnerDashboard() {
   );
   const mapRef = useRef(null);
   const recommendationPanelRef = useRef(null);
-
-  const themes = [
-    "Flood Management",
-    "Earthquake Safety",
-    "Cyclone Management",
-    "First Aid",
-    "Fire Safety",
-  ];
 
   const recommendationInputs = useMemo(
     () =>
@@ -432,26 +426,34 @@ export default function PartnerDashboard() {
     }
   };
 
-  const filteredTrainings = allTrainings.filter((training) => {
-    const matchesStatus =
-      filters.status === "all" || training.status === filters.status;
-    const matchesTheme =
-      filters.theme === "all" || training.theme === filters.theme;
-    const matchesSearch =
-      filters.search === "" ||
-      training.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      training.location?.district
-        ?.toLowerCase()
-        .includes(filters.search.toLowerCase()) ||
-      training.location?.state
-        ?.toLowerCase()
-        .includes(filters.search.toLowerCase());
-    const matchesPeriod = isTrainingInPeriod(
-      training.startDate,
-      filters.period,
-    );
-    return matchesStatus && matchesTheme && matchesSearch && matchesPeriod;
-  });
+  const filteredTrainings = (() => {
+    let sourceTrainings = showYourTraining
+      ? allTrainings
+      : globalTrainings.filter(
+          (training) => training.partnerId !== user?.organizationId,
+        );
+
+    return sourceTrainings.filter((training) => {
+      const matchesStatus =
+        filters.status === "all" || training.status === filters.status;
+      const matchesTheme =
+        filters.theme === "all" || training.theme === filters.theme;
+      const matchesSearch =
+        filters.search === "" ||
+        training.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        training.location?.district
+          ?.toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        training.location?.state
+          ?.toLowerCase()
+          .includes(filters.search.toLowerCase());
+      const matchesPeriod = isTrainingInPeriod(
+        training.startDate,
+        filters.period,
+      );
+      return matchesStatus && matchesTheme && matchesSearch && matchesPeriod;
+    });
+  })();
 
   const mappableLocations = useMemo(
     () =>
@@ -488,7 +490,7 @@ export default function PartnerDashboard() {
           Number.isFinite(Number(training.location?.latitude)) &&
           Number.isFinite(Number(training.location?.longitude)),
       ),
-    [filteredTrainings],
+    [filteredTrainings, showYourTraining],
   );
 
   const districtCoordinateLookup = useMemo(() => {
@@ -1198,9 +1200,9 @@ export default function PartnerDashboard() {
                       className={styles["filter-select"]}
                     >
                       <option value="all">All Themes</option>
-                      {themes.map((theme) => (
-                        <option key={theme} value={theme}>
-                          {theme}
+                      {themeOptions.map((theme) => (
+                        <option key={theme.value} value={theme.value}>
+                          {theme.label}
                         </option>
                       ))}
                     </select>
@@ -1247,9 +1249,25 @@ export default function PartnerDashboard() {
                     </label>
                   </div>
 
+                  {showTrainings && (
+                    <div className={styles["filter-drawer-field"]}>
+                      <label className={styles["filter-drawer-checkbox"]}>
+                        <input
+                          type="checkbox"
+                          checked={showYourTraining}
+                          onChange={(e) =>
+                            setShowYourTraining(e.target.checked)
+                          }
+                        />
+                        Your Training
+                      </label>
+                    </div>
+                  )}
+
                   <div className={styles["filter-drawer-count"]}>
-                    Showing {filteredTrainings.length} of {allTrainings.length}{" "}
-                    trainings
+                    {showYourTraining
+                      ? `Showing ${filteredTrainings.length} of ${allTrainings.length} your trainings`
+                      : `Showing ${filteredTrainings.length} other partners' trainings`}
                   </div>
                 </div>
               </aside>

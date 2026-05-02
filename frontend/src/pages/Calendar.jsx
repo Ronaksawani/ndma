@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import styles from "../styles/Calendar.module.css";
-import { FiCalendar, FiMapPin, FiUsers, FiClock, FiX } from "react-icons/fi";
+import {
+  FiCalendar,
+  FiMapPin,
+  FiUsers,
+  FiClock,
+  FiX,
+  FiFilter,
+} from "react-icons/fi";
 import { trainingAPI } from "../utils/api";
+import themeOptions from "../data/themes.json";
+import { states, districts } from "../data/statesDistricts.json";
 import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 
@@ -10,9 +19,9 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 const blueMarkerIcon = new L.Icon({
   iconUrl:
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='50' viewBox='0 0 40 50'%3E%3Cpath d='M20 0C10.06 0 2 8.06 2 18c0 15 18 32 18 32s18-17 18-32c0-9.94-8.06-18-18-18zm0 26c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z' fill='%230472ff'/%3E%3Ccircle cx='20' cy='18' r='5' fill='white'/%3E%3C/svg%3E",
-  iconSize: [40, 50],
-  iconAnchor: [20, 50],
-  popupAnchor: [0, -50],
+  iconSize: [20, 26],
+  iconAnchor: [10, 26],
+  popupAnchor: [0, -26],
 });
 
 function TrainingModal({ training, onClose }) {
@@ -181,20 +190,15 @@ function TrainingModal({ training, onClose }) {
 
 export default function Calendar() {
   const [selectedTheme, setSelectedTheme] = useState("all");
+  const [selectedState, setSelectedState] = useState("all");
+  const [selectedDistrict, setSelectedDistrict] = useState("all");
+  const [showUpcomingOnly, setShowUpcomingOnly] = useState(false);
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTraining, setSelectedTraining] = useState(null);
   const [showMapModal, setShowMapModal] = useState(false);
 
-  const themes = [
-    "all",
-    "Flood Management",
-    "Cyclone Management",
-    "Earthquake Safety",
-    "First Aid",
-    "Fire Safety",
-    "Emergency Response",
-  ];
+  const themes = ["all", ...themeOptions.map((theme) => theme.value)];
 
   // Fetch trainings from database
   useEffect(() => {
@@ -215,16 +219,63 @@ export default function Calendar() {
     fetchTrainings();
   }, []);
 
-  const filteredTrainings =
-    selectedTheme === "all"
-      ? trainings.filter((t) => t.status !== "rejected")
-      : trainings.filter(
-          (t) => t.theme === selectedTheme && t.status !== "rejected",
-        );
+  // Reset district when state changes
+  useEffect(() => {
+    setSelectedDistrict("all");
+  }, [selectedState]);
 
-  const upcomingTrainings = filteredTrainings.sort(
+  const matchesSelectedState = (trainingState) => {
+    if (selectedState === "all") {
+      return true;
+    }
+
+    const selectedStateLabel =
+      states.find((state) => state.value === selectedState)?.label ||
+      selectedState;
+
+    return (
+      trainingState === selectedState || trainingState === selectedStateLabel
+    );
+  };
+
+  const filteredTrainings = trainings
+    .filter((t) => t.status !== "rejected")
+    .filter((t) => selectedTheme === "all" || t.theme === selectedTheme)
+    .filter((t) => matchesSelectedState(t.location?.state))
+    .filter(
+      (t) =>
+        selectedDistrict === "all" || t.location?.district === selectedDistrict,
+    )
+    .filter((t) => {
+      if (!showUpcomingOnly) return true;
+      const trainingDate = new Date(t.startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return trainingDate >= today;
+    });
+
+  const sortedTrainings = filteredTrainings.sort(
     (a, b) => new Date(a.startDate) - new Date(b.startDate),
   );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcomingTrainings = sortedTrainings.filter(
+    (training) => new Date(training.startDate) >= today,
+  );
+
+  // Get available districts based on selected state
+  const stateOptions = [{ value: "all", label: "All States" }, ...states];
+
+  const districtOptions = [
+    { value: "all", label: "All Districts" },
+    ...(selectedState === "all"
+      ? []
+      : (districts[selectedState] || []).map((district) => ({
+          value: district,
+          label: district,
+        }))),
+  ];
 
   return (
     <div className={styles["wrapper"]}>
@@ -332,19 +383,64 @@ export default function Calendar() {
         <section className={styles["content"]}>
           {/* Filter Section */}
           <div className={styles["filters"]}>
-            <h3 className={styles["filter-title"]}>Filter by Theme</h3>
             <div className={styles["filter-buttons"]}>
-              {themes.map((theme) => (
-                <button
-                  key={theme}
-                  className={`${styles["filter-btn"]} ${
-                    selectedTheme === theme ? styles["active"] : ""
-                  }`}
-                  onClick={() => setSelectedTheme(theme)}
+              {/* Theme Filter */}
+              <div className={styles["filter-select-wrap"]}>
+                <FiFilter className={styles["filter-icon"]} />
+                <select
+                  className={styles["filter-select"]}
+                  value={selectedTheme}
+                  onChange={(e) => setSelectedTheme(e.target.value)}
                 >
-                  {theme === "all" ? "All Themes" : theme}
-                </button>
-              ))}
+                  <option value="all">All Themes</option>
+                  {themeOptions.map((theme) => (
+                    <option key={theme.value} value={theme.value}>
+                      {theme.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* State Filter */}
+              <div className={styles["filter-select-wrap"]}>
+                <select
+                  className={styles["filter-select"]}
+                  value={selectedState}
+                  onChange={(e) => setSelectedState(e.target.value)}
+                >
+                  {stateOptions.map((state) => (
+                    <option key={state.value} value={state.value}>
+                      {state.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* District Filter */}
+              <div className={styles["filter-select-wrap"]}>
+                <select
+                  className={styles["filter-select"]}
+                  value={selectedDistrict}
+                  onChange={(e) => setSelectedDistrict(e.target.value)}
+                >
+                  {districtOptions.map((district) => (
+                    <option key={district.value} value={district.value}>
+                      {district.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Upcoming Filter Button */}
+              <button
+                className={`${styles["filter-btn"]} ${showUpcomingOnly ? styles["filter-btn-active"] : ""}`}
+                onClick={() => setShowUpcomingOnly(!showUpcomingOnly)}
+              >
+                <FiCalendar style={{ marginRight: "6px" }} />
+                Upcoming
+              </button>
+
+              {/* Map Button */}
               <button
                 className={`${styles["filter-btn"]} ${styles["map-btn"]}`}
                 onClick={() => setShowMapModal(true)}
@@ -365,7 +461,7 @@ export default function Calendar() {
           {/* Trainings Grid */}
           {!loading && (
             <div className={styles["trainings-grid"]}>
-              {upcomingTrainings.map((training) => (
+              {filteredTrainings.map((training) => (
                 <div key={training._id} className={styles["training-card"]}>
                   <div className={styles["card-header"]}>
                     <div className={styles["date-badge"]}>
@@ -445,9 +541,9 @@ export default function Calendar() {
             </div>
           )}
 
-          {!loading && upcomingTrainings.length === 0 && (
+          {!loading && filteredTrainings.length === 0 && (
             <div className={styles["no-results"]}>
-              <p>No trainings found for the selected theme.</p>
+              <p>No trainings found for the selected filters.</p>
             </div>
           )}
         </section>
@@ -464,8 +560,8 @@ export default function Calendar() {
             </div>
             <div className={styles["stat-card"]}>
               <div className={styles["stat-number"]}>
-                {upcomingTrainings.reduce(
-                  (sum, t) => sum + t.participantsCount,
+                {filteredTrainings.reduce(
+                  (sum, t) => sum + (t.participantsCount || 0),
                   0,
                 )}
               </div>
@@ -473,12 +569,18 @@ export default function Calendar() {
             </div>
             <div className={styles["stat-card"]}>
               <div className={styles["stat-number"]}>
-                {new Set(upcomingTrainings.map((t) => t.location.state)).size}
+                {
+                  new Set(
+                    filteredTrainings
+                      .map((t) => t.location?.state)
+                      .filter(Boolean),
+                  ).size
+                }
               </div>
               <div className={styles["stat-label"]}>States Covered</div>
             </div>
             <div className={styles["stat-card"]}>
-              <div className={styles["stat-number"]}>{themes.length - 1}</div>
+              <div className={styles["stat-number"]}>{themeOptions.length}</div>
               <div className={styles["stat-label"]}>Training Themes</div>
             </div>
           </div>

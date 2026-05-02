@@ -8,6 +8,7 @@ import {
   Circle,
 } from "react-leaflet";
 import { analyticsAPI, partnerAPI, trainingAPI } from "../utils/api";
+import themeOptions from "../data/themes.json";
 import Sidebar from "../components/Sidebar";
 import { generateRecommendations } from "../utils/generateRecommendations";
 import { getColor, getDisasterFromTheme } from "../utils/recommendationEngine";
@@ -153,16 +154,6 @@ const AdminDashboard = () => {
     theme: "all",
     period: "all",
   });
-
-  const themes = [
-    "Flood Management",
-    "Earthquake Safety",
-    "Cyclone Management",
-    "First Aid",
-    "Fire Safety",
-    "Landslide Management",
-    "Tsunami Awareness",
-  ];
 
   const recommendationInputs = useMemo(
     () =>
@@ -1165,9 +1156,9 @@ const AdminDashboard = () => {
                         }
                       >
                         <option value="all">All Themes</option>
-                        {themes.map((theme) => (
-                          <option key={theme} value={theme}>
-                            {theme}
+                        {themeOptions.map((theme) => (
+                          <option key={theme.value} value={theme.value}>
+                            {theme.label}
                           </option>
                         ))}
                       </select>

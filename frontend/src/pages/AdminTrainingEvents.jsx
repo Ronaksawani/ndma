@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI, partnerAPI } from "../utils/api";
+import themeOptions from "../data/themes.json";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/AdminTrainingEvents.module.css";
 import { FiSearch, FiChevronLeft, FiChevronRight, FiX } from "react-icons/fi";
@@ -45,16 +46,6 @@ const AdminTrainingEvents = () => {
   });
 
   const itemsPerPage = 10;
-  const themes = [
-    "Flood Management",
-    "Earthquake Safety",
-    "Cyclone Management",
-    "First Aid",
-    "Fire Safety",
-    "Landslide Management",
-    "Tsunami Awareness",
-  ];
-
   const statuses = ["all", "pending", "approved", "rejected"];
 
   useEffect(() => {
@@ -66,7 +57,10 @@ const AdminTrainingEvents = () => {
     try {
       setLoading(true);
       const response = await trainingAPI.getAll({ limit: 100 });
-      console.log("API Response - Total trainings returned:", response.data.trainings?.length);
+      console.log(
+        "API Response - Total trainings returned:",
+        response.data.trainings?.length,
+      );
       setTrainings(response.data.trainings || []);
       setFilteredTrainings(response.data.trainings || []);
     } catch (error) {
@@ -103,9 +97,15 @@ const AdminTrainingEvents = () => {
       filtered = filtered.filter(
         (training) =>
           training.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          training.location?.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          training.location?.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          training.partnerId?.organizationName?.toLowerCase().includes(searchTerm.toLowerCase())
+          training.location?.city
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          training.location?.state
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          training.partnerId?.organizationName
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -115,7 +115,7 @@ const AdminTrainingEvents = () => {
 
   const paginatedTrainings = filteredTrainings.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
   const totalPages = Math.ceil(filteredTrainings.length / itemsPerPage);
 
@@ -159,14 +159,17 @@ const AdminTrainingEvents = () => {
       };
 
       // Use admin-specific endpoint
-      const response = await fetch("http://localhost:4000/api/trainings/admin/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+      const response = await fetch(
+        "http://localhost:4000/api/trainings/admin/create",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(payload),
         },
-        body: JSON.stringify(payload),
-      });
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -273,9 +276,9 @@ const AdminTrainingEvents = () => {
               }
             >
               <option value="all">All Themes</option>
-              {themes.map((theme) => (
-                <option key={theme} value={theme}>
-                  {theme}
+              {themeOptions.map((theme) => (
+                <option key={theme.value} value={theme.value}>
+                  {theme.label}
                 </option>
               ))}
             </select>
@@ -311,7 +314,7 @@ const AdminTrainingEvents = () => {
                         <td>
                           {training.startDate && training.endDate
                             ? `${formatDate(training.startDate)} - ${formatDate(
-                                training.endDate
+                                training.endDate,
                               )}`
                             : "N/A"}
                         </td>
@@ -320,7 +323,9 @@ const AdminTrainingEvents = () => {
                         </td>
                         <td>{training.partnerId?.organizationName || "N/A"}</td>
                         <td>
-                          <span className={getStatusBadgeClass(training.status)}>
+                          <span
+                            className={getStatusBadgeClass(training.status)}
+                          >
                             {training.status?.charAt(0).toUpperCase() +
                               training.status?.slice(1)}
                           </span>
@@ -401,9 +406,9 @@ const AdminTrainingEvents = () => {
                     required
                   >
                     <option value="">Select Theme</option>
-                    {themes.map((theme) => (
-                      <option key={theme} value={theme}>
-                        {theme}
+                    {themeOptions.map((theme) => (
+                      <option key={theme.value} value={theme.value}>
+                        {theme.label}
                       </option>
                     ))}
                   </select>
@@ -452,7 +457,9 @@ const AdminTrainingEvents = () => {
                     disabled={!formData.state}
                   >
                     <option value="">
-                      {formData.state ? "Select District" : "Select State First"}
+                      {formData.state
+                        ? "Select District"
+                        : "Select State First"}
                     </option>
                     {availableDistricts.map((district) => (
                       <option key={district} value={district}>
@@ -622,7 +629,8 @@ const AdminTrainingEvents = () => {
             </form>
           </div>
         </div>
-      )}    </div>
+      )}{" "}
+    </div>
   );
 };
 

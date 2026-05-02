@@ -12,6 +12,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI, uploadAPI } from "../utils/api";
+import themeOptions from "../data/themes.json";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/Form.module.css";
 
@@ -457,15 +458,11 @@ export default function EditTraining() {
                         required
                       >
                         <option value="">Select Theme</option>
-                        <option value="Flood Management">Flood Rescue</option>
-                        <option value="Earthquake Safety">
-                          Earthquake Preparedness
-                        </option>
-                        <option value="Cyclone Management">
-                          Cyclone Management
-                        </option>
-                        <option value="First Aid">First Aid</option>
-                        <option value="Fire Safety">Fire Safety</option>
+                        {themeOptions.map((theme) => (
+                          <option key={theme.value} value={theme.value}>
+                            {theme.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>

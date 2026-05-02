@@ -4,6 +4,7 @@ import {
   FiBarChart2,
   FiPlus,
   FiList,
+  FiCalendar,
   FiUser,
   FiSettings,
   FiUsers,
@@ -15,6 +16,7 @@ import { useAuth } from "../context/AuthContext";
 const IconMap = {
   "📊": <FiBarChart2 />,
   "➕": <FiPlus />,
+  "📅": <FiCalendar />,
   "📋": <FiList />,
   "👤": <FiUser />,
   "⚙️": <FiSettings />,
@@ -36,6 +38,11 @@ export default function Sidebar({ role }) {
   const partnerLinks = [
     { icon: "📊", label: "Dashboard", href: "/partner/dashboard" },
     { icon: "➕", label: "Add Training", href: "/partner/add-training" },
+    {
+      icon: "📅",
+      label: "Schedule Training",
+      href: "/partner/schedule-training",
+    },
     { icon: "📋", label: "My Trainings", href: "/partner/my-trainings" },
     { icon: "📈", label: "Reports", href: "/partner/reports" },
     { icon: "👤", label: "Profile", href: "/partner/profile" },

@@ -308,14 +308,14 @@ export default function ViewTraining() {
                             training.status === "approved"
                               ? "#d1fae5"
                               : training.status === "pending"
-                              ? "#fef3c7"
-                              : "#fee2e2",
+                                ? "#fef3c7"
+                                : "#fee2e2",
                           color:
                             training.status === "approved"
                               ? "#10b981"
                               : training.status === "pending"
-                              ? "#f59e0b"
-                              : "#ef4444",
+                                ? "#f59e0b"
+                                : "#ef4444",
                           fontSize: "12px",
                           fontWeight: "600",
                         }}
@@ -379,7 +379,9 @@ export default function ViewTraining() {
                           }
                         />
                         <button
-                          onClick={() => downloadMedia(photo.url, photo.filename)}
+                          onClick={() =>
+                            downloadMedia(photo.url, photo.filename)
+                          }
                           style={{
                             position: "absolute",
                             top: "50%",
@@ -421,7 +423,7 @@ export default function ViewTraining() {
                     onClick={() =>
                       downloadMedia(
                         training.attendanceSheet.url,
-                        training.attendanceSheet.filename
+                        training.attendanceSheet.filename,
                       )
                     }
                     style={{
@@ -429,7 +431,8 @@ export default function ViewTraining() {
                       alignItems: "center",
                       gap: "8px",
                       padding: "10px 16px",
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       color: "white",
                       border: "none",
                       borderRadius: "6px",
@@ -442,7 +445,8 @@ export default function ViewTraining() {
                     onMouseLeave={(e) => (e.target.style.opacity = "1")}
                     title="Download attendance sheet"
                   >
-                    <FiDownload /> Download ({training.attendanceSheet.filename})
+                    <FiDownload /> Download ({training.attendanceSheet.filename}
+                    )
                   </button>
                 </div>
               )}
