@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { trainingAPI, partnerAPI } from "../utils/api";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/AdminTrainingEvents.module.css";
@@ -232,6 +233,7 @@ const AdminTrainingEvents = () => {
     <div className={styles.layout}>
       <Sidebar role="admin" />
       <div className={styles.container}>
+        <PageTopBar title="Training Events" />
         <div className={styles.header}>
           <h1>Training Events List</h1>
         </div>

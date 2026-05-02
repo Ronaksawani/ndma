@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { trainingAPI } from "../utils/api";
 import styles from "../styles/Form.module.css";
 import { FiDownload } from "react-icons/fi";
@@ -160,6 +161,7 @@ export default function ViewTraining() {
     <div className="layout-container">
       <Sidebar role="partner" />
       <div className="main-content">
+        <PageTopBar title="View Training Event" />
         <div className="top-nav">
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <h2 className="nav-title">View Training Event</h2>

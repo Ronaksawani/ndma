@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { authAPI } from "../utils/api";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/Register.module.css";
@@ -289,6 +290,7 @@ export default function Register() {
               background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
             }}
           >
+            <PageTopBar title="Add Partner" />
             <div className={styles["register-container"]}>
               {renderRegisterCard()}
             </div>

@@ -10,6 +10,7 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { trainingAPI } from "../utils/api";
 import styles from "../styles/Reports.module.css";
 
@@ -172,6 +173,7 @@ export default function PartnerReports() {
     <div className="layout-container">
       <Sidebar role="partner" />
       <div className="main-content">
+        <PageTopBar title="Reports & Analytics" />
         <div className="top-nav">
           <h2 className="nav-title">Reports & Analytics</h2>
           <div className="nav-right">

@@ -11,6 +11,7 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { trainingAPI, uploadAPI } from "../utils/api";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/Form.module.css";
@@ -420,6 +421,7 @@ export default function EditTraining() {
     <div className="layout-container">
       <Sidebar role="partner" />
       <div className="main-content">
+        <PageTopBar title="Edit Training Event" />
         <div className="top-nav">
           <h2 className="nav-title">Edit Training Event</h2>
         </div>

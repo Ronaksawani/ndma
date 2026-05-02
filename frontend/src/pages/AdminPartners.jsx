@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import PageTopBar from "../components/PageTopBar";
 import { partnerAPI } from "../utils/api";
 import styles from "../styles/AdminPartners.module.css";
 import { FiSearch } from "react-icons/fi";
@@ -72,6 +73,7 @@ const AdminPartners = () => {
     <div className={styles.layout}>
       <Sidebar role="admin" />
       <div className={styles.container}>
+        <PageTopBar title="Partner Organizations" />
         <div className={styles.header}>
           <div className={styles.headerContent}>
             <h1>Partner Organizations</h1>

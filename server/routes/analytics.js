@@ -200,23 +200,23 @@ router.get("/gaps", auth, async (req, res) => {
       (state) => !statesWithTrainings.includes(state),
     );
 
-    // Low coverage districts
-    const districtCoverage = await TrainingEvent.aggregate([
+    // Low coverage states
+    const lowCoverageStates = await TrainingEvent.aggregate([
       { $match: { status: "approved" } },
       {
         $group: {
-          _id: "$location.district",
+          _id: "$location.state",
           count: { $sum: 1 },
-          state: { $first: "$location.state" },
+          participants: { $sum: { $ifNull: ["$participantsCount", 0] } },
         },
       },
-      { $sort: { count: 1 } },
-      { $limit: 5 },
+      { $sort: { count: 1, participants: 1 } },
+      { $limit: 8 },
     ]);
 
     res.json({
       uncoveredStates,
-      lowCoverageDistricts: districtCoverage,
+      lowCoverageStates,
     });
   } catch (error) {
     res
