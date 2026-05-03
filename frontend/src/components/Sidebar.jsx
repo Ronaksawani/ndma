@@ -25,10 +25,10 @@ const IconMap = {
   "🚪": <FiLogOut />,
 };
 
-export default function Sidebar({ role }) {
+export default function Sidebar({ role, isOpen, onClose }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -75,6 +75,39 @@ export default function Sidebar({ role }) {
     },
   ];
 
+  const participantLinks = [
+    {
+      icon: "📊",
+      label: "Dashboard",
+      href: "/participant/dashboard",
+      match: ["/participant/dashboard"],
+    },
+    {
+      icon: "📅",
+      label: "Training Details",
+      href: "/participant/upcoming-trainings",
+      match: ["/participant/upcoming-trainings"],
+    },
+    {
+      icon: "🤝",
+      label: "My Participations",
+      href: "/participant/my-participations",
+      match: ["/participant/my-participations"],
+    },
+    {
+      icon: "🎓",
+      label: (user?.certificatesCount || 0) > 1 ? "Certificates" : "Certificate",
+      href: "/participant/certificates",
+      match: ["/participant/certificates"],
+    },
+    {
+      icon: "👤",
+      label: "My Profile",
+      href: "/participant/profile",
+      match: ["/participant/profile"],
+    },
+  ];
+
   const partnerLinksWithMatch = partnerLinks.map((link) => ({
     ...link,
     match:
@@ -87,7 +120,12 @@ export default function Sidebar({ role }) {
         : [link.href],
   }));
 
-  const links = role === "admin" ? adminLinks : partnerLinksWithMatch;
+  const links =
+    role === "admin"
+      ? adminLinks
+      : role === "participant"
+        ? participantLinks
+        : partnerLinksWithMatch;
 
   const isActiveLink = (link) => {
     return link.match.some(
@@ -97,11 +135,15 @@ export default function Sidebar({ role }) {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? "active" : ""}`}>
       <div className="sidebar-logo">
         <img src="/ndma-logo.png" alt="Logo" />
         <div className="sidebar-title">
-          {role === "admin" ? "NDMA Admin" : "Partner Portal"}
+          {role === "admin"
+            ? "NDMA Admin"
+            : role === "participant"
+              ? "Participant Portal"
+              : "Partner Portal"}
         </div>
       </div>
       <ul className="sidebar-menu">
@@ -111,6 +153,7 @@ export default function Sidebar({ role }) {
               to={link.href}
               className={isActiveLink(link) ? "active" : ""}
               aria-current={isActiveLink(link) ? "page" : undefined}
+              onClick={() => onClose && onClose()}
             >
               <span className="sidebar-icon">
                 {IconMap[link.icon] || link.icon}
@@ -127,7 +170,10 @@ export default function Sidebar({ role }) {
           }}
         >
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              handleLogout();
+              if (onClose) onClose();
+            }}
             style={{
               display: "flex",
               alignItems: "center",

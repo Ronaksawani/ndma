@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { FiEdit2, FiEye, FiMenu, FiSearch } from "react-icons/fi";
 import { FiEdit2, FiEye, FiSearch, FiSend, FiXCircle } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
@@ -19,6 +20,7 @@ export default function MyTrainings() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showOtherPartnersTrainings, setShowOtherPartnersTrainings] =
     useState(false);
   const [otherPartnersTrainings, setOtherPartnersTrainings] = useState([]);
@@ -242,9 +244,16 @@ export default function MyTrainings() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" />
+      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
         <div className="top-nav">
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h2 className="nav-title">
             My Trainings - {user?.organizationName || "[Organization Name]"}
           </h2>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { FiMenu } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
 import { analyticsAPI, trainingAPI } from "../utils/api";
 import statesData from "../data/statesDistricts.json";
@@ -38,6 +38,7 @@ const AdminReports = () => {
     state: "all",
     status: "all",
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Color palette for charts
   const colors = [
@@ -476,10 +477,17 @@ const AdminReports = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="admin" />
+      <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
+          <button 
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <div>
             <h1>Reports & Analytics</h1>
             <p className={styles.headerSubtitle}>

@@ -90,12 +90,28 @@ app.use((err, req, res, next) => {
 });
 
 // =====================
-// SERVER START
+// SERVER START — start only after successful DB connection
 // =====================
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    // Wait for mongoose to connect (already initiated above)
+    // If not connected yet, await the connection
+    if (mongoose.connection.readyState !== 1) {
+      console.log("⏳ Waiting for MongoDB connection before starting server...");
+      await mongoose.connection.asPromise();
+    }
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to start server:", err.message);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 

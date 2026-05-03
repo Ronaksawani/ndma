@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CiCamera, CiFileOn } from "react-icons/ci";
+import { FiMenu } from "react-icons/fi";
 import {
   MapContainer,
   TileLayer,
@@ -104,6 +105,7 @@ export default function AddTraining() {
   });
   const [addedParticipants, setAddedParticipants] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isAadhaarValid = (value) => /^\d{12}$/.test(value);
   const isEmailValid = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -331,9 +333,17 @@ export default function AddTraining() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" />
+      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
         <div className="top-nav">
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
+          
           <h2 className="nav-title">
             {scheduledTrainingId
               ? "Submit Scheduled Training for Approval"

@@ -33,6 +33,20 @@ const TrainingEventSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  participantsCount: Number,
+  registeredParticipants: [
+    {
+      participantId: mongoose.Schema.Types.ObjectId,
+      email: String,
+      name: String,
+      registeredAt: Date,
+      status: {
+        type: String,
+        enum: ["registered", "attended", "cancelled"],
+        default: "registered",
+      },
+    },
+  ],
   participantBreakdown: {
     government: { type: Number, default: 0 },
     ngo: { type: Number, default: 0 },
@@ -50,9 +64,10 @@ const TrainingEventSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["upcoming", "pending", "approved", "rejected", "canceled"],
+    enum: ["upcoming", "pending", "approved", "rejected", "ongoing", "completed", "cancelled"],
     default: "pending",
   },
+  statusChangeReason: String,
   rejectionReason: String,
   partnerId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -69,5 +84,7 @@ const TrainingEventSchema = new mongoose.Schema({
 
 // Index for geo queries
 TrainingEventSchema.index({ "location.latitude": 1, "location.longitude": 1 });
+TrainingEventSchema.index({ startDate: 1 });
+TrainingEventSchema.index({ "location.state": 1, "location.district": 1 });
 
 module.exports = mongoose.model("TrainingEvent", TrainingEventSchema);

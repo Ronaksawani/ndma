@@ -5,7 +5,7 @@ import { trainingAPI, partnerAPI } from "../utils/api";
 import themeOptions from "../data/themes.json";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/AdminTrainingEvents.module.css";
-import { FiSearch, FiChevronLeft, FiChevronRight, FiX } from "react-icons/fi";
+import { FiSearch, FiChevronLeft, FiChevronRight, FiX, FiMenu } from "react-icons/fi";
 
 const AdminTrainingEvents = () => {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ const AdminTrainingEvents = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [partners, setPartners] = useState([]);
   const [formLoading, setFormLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -233,9 +234,16 @@ const AdminTrainingEvents = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="admin" />
+      <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.container}>
         <div className={styles.header}>
+          <button 
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h1>Training Events List</h1>
         </div>
 

@@ -19,6 +19,7 @@ import {
   FiMapPin,
   FiBell,
   FiFilter,
+  FiMenu,
 } from "react-icons/fi";
 import disasterRiskData from "../data/disaster_risk_dataset_india.json";
 import districtCoordsData from "../data/district_coords.json";
@@ -144,6 +145,7 @@ const AdminDashboard = () => {
       return [];
     }
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const mapRef = useRef(null);
   const recommendationPanelRef = useRef(null);
 
@@ -831,7 +833,7 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className={styles.adminLayout}>
-        <Sidebar role="admin" />
+        <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className={styles.dashboardContainer}>
           <div className={styles.loadingState}>
             <p>Loading dashboard...</p>
@@ -843,10 +845,17 @@ const AdminDashboard = () => {
 
   return (
     <div className={styles.adminLayout}>
-      <Sidebar role="admin" />
+      <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.dashboardContainer}>
         {/* Top Bar */}
         <div className={styles.topBar}>
+          <button 
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h2 className={styles.topBarTitle}>NDMA Admin Dashboard</h2>
           <div className={styles.headerActions}>
             <button

@@ -6,6 +6,7 @@ import {
   FiCalendar,
   FiDownload,
   FiPieChart,
+  FiMenu,
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
@@ -17,6 +18,8 @@ export default function PartnerReports() {
   const { user } = useAuth();
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -137,9 +140,16 @@ export default function PartnerReports() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" />
+      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
         <div className="top-nav">
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h2 className="nav-title">Reports & Analytics</h2>
           <div className="nav-right">
             <button className={styles["export-btn"]} onClick={handleExport}>
