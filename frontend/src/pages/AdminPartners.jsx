@@ -74,13 +74,13 @@ const AdminPartners = () => {
       <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.container}>
         <div className={styles.header}>
-          <button 
+          {/* <button 
             className={styles.sidebarToggle}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
           >
             <FiMenu size={24} />
-          </button>
+          </button> */}
           <div className={styles.headerContent}>
             <h1>Partner Organizations</h1>
             <button

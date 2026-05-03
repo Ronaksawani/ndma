@@ -173,6 +173,28 @@ export default function ViewTraining() {
             <div className={styles["form-card"]}>
               {error && <div className="alert alert-danger">{error}</div>}
 
+              {/* Admin rejection message banner for rejected trainings */}
+              {training.status === "rejected" && (
+                <div
+                  style={{
+                    background: "#fff1f2",
+                    border: "1px solid #fecaca",
+                    color: "#991b1b",
+                    padding: "12px",
+                    borderRadius: "6px",
+                    marginBottom: "16px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <strong>Rejected by Admin:</strong>
+                  <span style={{ marginLeft: "8px" }}>
+                    {training.rejectionReason ||
+                      training.statusChangeReason ||
+                      "No reason provided by admin."}
+                  </span>
+                </div>
+              )}
+
               {/* Event Details */}
               <div className={styles["form-section"]}>
                 <h3 className={styles["form-section-title"]}>Event Details</h3>

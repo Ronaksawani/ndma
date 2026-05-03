@@ -237,13 +237,13 @@ const AdminTrainingEvents = () => {
       <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.container}>
         <div className={styles.header}>
-          <button 
+          {/* <button 
             className={styles.sidebarToggle}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
           >
             <FiMenu size={24} />
-          </button>
+          </button> */}
           <h1>Training Events List</h1>
         </div>
 

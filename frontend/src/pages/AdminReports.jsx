@@ -1,7 +1,7 @@
+import { useEffect, useState } from "react";
 import { FiMenu } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
 import { analyticsAPI, trainingAPI } from "../utils/api";
-import statesData from "../data/statesDistricts.json";
 import styles from "../styles/AdminReports.module.css";
 import {
   BarChart,
@@ -32,12 +32,6 @@ const AdminReports = () => {
   const [gapAnalysis, setGapAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    startDate: "",
-    endDate: "",
-    state: "all",
-    status: "all",
-  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Color palette for charts
@@ -50,11 +44,7 @@ const AdminReports = () => {
     "#f08080",
   ];
 
-  useEffect(() => {
-    fetchReportData();
-  }, [filters]);
-
-  const fetchReportData = async () => {
+  async function fetchReportData() {
     try {
       setLoading(true);
       setError(null);
@@ -118,10 +108,6 @@ const AdminReports = () => {
       const plannedTrainings = totalTrainings - completedTrainings;
 
       // Get partner count (approximate from recent activities)
-      const uniquePartners = new Set(
-        dashboardData.recentActivities?.map((t) => t.partnerId?._id) || [],
-      ).size;
-
       setReportData({
         totalTrainings,
         completedTrainings,
@@ -156,9 +142,9 @@ const AdminReports = () => {
       });
       setLoading(false);
     }
-  };
+  }
 
-  const processMonthlyTrends = async (dashboardData) => {
+  async function processMonthlyTrends() {
     try {
       // Fetch all trainings to get real monthly trend data
       const trainingsRes = await trainingAPI.getAll({ status: "approved" });
@@ -175,7 +161,6 @@ const AdminReports = () => {
       };
 
       const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
       const sixMonthsAgo = new Date(currentDate);
       sixMonthsAgo.setMonth(currentDate.getMonth() - 5);
 
@@ -211,20 +196,11 @@ const AdminReports = () => {
         planned: 0,
       }));
     }
-  };
+  }
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const getStateOptions = () => {
-    const states = participantsByState.map((s) => s.name);
-    return ["all", ...states];
-  };
+  useEffect(() => {
+    fetchReportData();
+  }, []);
 
   const exportToPDF = () => {
     try {
@@ -477,17 +453,21 @@ const AdminReports = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        role="admin"
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className={styles.container}>
         {/* Header */}
         <div className={styles.header}>
-          <button 
+          {/* <button 
             className={styles.sidebarToggle}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
           >
             <FiMenu size={24} />
-          </button>
+          </button> */}
           <div>
             <h1>Reports & Analytics</h1>
             <p className={styles.headerSubtitle}>
