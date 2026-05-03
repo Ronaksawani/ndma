@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FiLock, FiLogOut, FiTrash2, FiEye, FiEyeOff } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import styles from "../styles/AdminSettings.module.css";
 
 export default function AdminSettings() {
@@ -124,9 +123,8 @@ export default function AdminSettings() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-      <Sidebar role="admin" />
+      <Sidebar />
       <div className={styles.container}>
-        <PageTopBar title="Settings" />
       <div className={styles.header}>
         <h1>Settings</h1>
         <p>Manage your account and security preferences</p>

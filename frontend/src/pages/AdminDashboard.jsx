@@ -9,7 +9,6 @@ import {
 } from "react-leaflet";
 import { analyticsAPI, partnerAPI, trainingAPI } from "../utils/api";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { generateRecommendations } from "../utils/generateRecommendations";
 import { getColor, getDisasterFromTheme } from "../utils/recommendationEngine";
 import styles from "../styles/AdminDashboard.module.css";
@@ -19,6 +18,7 @@ import {
   FiMapPin,
   FiBell,
   FiFilter,
+  FiMenu,
 } from "react-icons/fi";
 import disasterRiskData from "../data/disaster_risk_dataset_india.json";
 import districtCoordsData from "../data/district_coords.json";
@@ -144,6 +144,7 @@ const AdminDashboard = () => {
       return [];
     }
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const mapRef = useRef(null);
   const recommendationPanelRef = useRef(null);
 
@@ -705,6 +706,10 @@ const AdminDashboard = () => {
   }, [focusedRecommendationKey, heatmapZones]);
 
   useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(
       RECENT_ACTIVITY_SEEN_STORAGE_KEY,
       JSON.stringify(seenRecentActivityKeys),
@@ -806,25 +811,6 @@ const AdminDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-
-    const refreshInterval = setInterval(() => {
-      fetchDashboardData();
-    }, 60000);
-
-    const handleWindowFocus = () => {
-      fetchDashboardData();
-    };
-
-    window.addEventListener("focus", handleWindowFocus);
-
-    return () => {
-      clearInterval(refreshInterval);
-      window.removeEventListener("focus", handleWindowFocus);
-    };
-  }, []);
-
   const getTimeAgo = (date) => {
     const now = new Date();
     const diffMs = now - new Date(date);
@@ -856,9 +842,8 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className={styles.adminLayout}>
-        <Sidebar role="admin" />
+        <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className={styles.dashboardContainer}>
-          <PageTopBar title="NDMA Admin Dashboard" />
           <div className={styles.loadingState}>
             <p>Loading dashboard...</p>
           </div>
@@ -869,13 +854,37 @@ const AdminDashboard = () => {
 
   return (
     <div className={styles.adminLayout}>
-      <Sidebar role="admin" />
+      <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.dashboardContainer}>
-        <PageTopBar
-          title="NDMA Admin Dashboard"
-          notificationCount={unreadRecentActivitiesCount}
-          onNotificationsClick={() => setShowActivitiesPanel((prev) => !prev)}
-        />
+        {/* Top Bar */}
+        <div className={styles.topBar}>
+          <button 
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
+          <h2 className={styles.topBarTitle}>NDMA Admin Dashboard</h2>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={styles.notificationButton}
+              title="Recent activities"
+              onClick={() => setShowActivitiesPanel((prev) => !prev)}
+            >
+              <FiBell />
+              {unreadRecentActivitiesCount > 0 && (
+                <span className={styles.notificationCount}>
+                  {Math.min(unreadRecentActivitiesCount, 9)}
+                </span>
+              )}
+              <span className={styles.notificationTooltip}>
+                Recent Activities
+              </span>
+            </button>
+          </div>
+        </div>
 
         <div className={styles.mainContentWrapper}>
           {error && <div className={styles.errorBanner}>{error}</div>}

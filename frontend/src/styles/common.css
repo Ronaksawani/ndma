@@ -521,17 +521,56 @@ tr:hover {
   margin-bottom: 15px;
 }
 
+/* ====== SIDEBAR TOGGLE BUTTON ====== */
+.sidebar-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--dark-text);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  font-size: 20px;
+}
+
+.sidebar-toggle:hover {
+  background: var(--light-bg);
+}
+
 /* ====== RESPONSIVE ====== */
 @media (max-width: 768px) {
+  .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .sidebar {
     transform: translateX(-100%);
-    transition: transform 0.3s;
-    z-index: 100;
+    transition: transform 0.3s ease-in-out;
+    z-index: 999;
     width: 250px;
   }
 
   .sidebar.active {
     transform: translateX(0);
+  }
+
+  .sidebar::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    display: none;
+  }
+
+  .sidebar.active::after {
+    display: block;
   }
 
   .main-content {

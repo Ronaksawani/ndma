@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiEdit2, FiEye, FiSearch } from "react-icons/fi";
+import { FiEdit2, FiEye, FiMenu, FiSearch } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { trainingAPI } from "../utils/api";
 import styles from "../styles/Dashboard.module.css";
 
@@ -18,6 +17,7 @@ export default function MyTrainings() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchTrainings();
@@ -105,12 +105,16 @@ export default function MyTrainings() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" />
+      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
-        <PageTopBar
-          title={`My Trainings - ${user?.organizationName || "[Organization Name]"}`}
-        />
         <div className="top-nav">
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h2 className="nav-title">
             My Trainings - {user?.organizationName || "[Organization Name]"}
           </h2>

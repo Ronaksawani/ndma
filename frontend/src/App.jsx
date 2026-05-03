@@ -13,6 +13,7 @@ import "leaflet/dist/leaflet.css";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ParticipantRegister from "./pages/ParticipantRegister";
 import PartnerRegistrationGuide from "./pages/PartnerRegistrationGuide";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import Calendar from "./pages/Calendar";
@@ -24,6 +25,12 @@ import ViewTraining from "./pages/ViewTraining";
 import MyTrainings from "./pages/MyTrainings";
 import PartnerReports from "./pages/PartnerReports";
 import Profile from "./pages/Profile";
+import ParticipantDashboard from "./pages/ParticipantDashboard";
+import ParticipantUpcomingTrainings from "./pages/ParticipantUpcomingTrainings";
+import ParticipantTrainingDetails from "./pages/ParticipantTrainingDetails";
+import ParticipantMyParticipations from "./pages/ParticipantMyParticipations";
+import ParticipantCertificates from "./pages/ParticipantCertificates";
+import ParticipantProfile from "./pages/ParticipantProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminTrainingEvents from "./pages/AdminTrainingEvents";
 import AdminReviewTraining from "./pages/AdminReviewTraining";
@@ -61,6 +68,7 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/participant/register" element={<ParticipantRegister />} />
       <Route
         path="/partner-registration-guide"
         element={<PartnerRegistrationGuide />}
@@ -181,6 +189,56 @@ function AppRoutes() {
         element={
           <ProtectedRoute role="admin">
             <AdminReports />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Participant Routes */}
+      <Route
+        path="/participant/dashboard"
+        element={
+          <ProtectedRoute role="participant">
+            <ParticipantDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/participant/upcoming-trainings"
+        element={
+          <ProtectedRoute role="participant">
+            <ParticipantUpcomingTrainings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/participant/training-details"
+        element={
+          <ProtectedRoute role="participant">
+            <ParticipantTrainingDetails />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/participant/my-participations"
+        element={
+          <ProtectedRoute role="participant">
+            <ParticipantMyParticipations />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/participant/certificates"
+        element={
+          <ProtectedRoute role="participant">
+            <ParticipantCertificates />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/participant/profile"
+        element={
+          <ProtectedRoute role="participant">
+            <ParticipantProfile />
           </ProtectedRoute>
         }
       />

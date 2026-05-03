@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CiCamera, CiFileOn } from "react-icons/ci";
+import { FiMenu } from "react-icons/fi";
 import {
   MapContainer,
   TileLayer,
@@ -11,7 +12,6 @@ import {
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { trainingAPI, uploadAPI } from "../utils/api";
 import statesDistrictsData from "../data/statesDistricts.json";
 import styles from "../styles/Form.module.css";
@@ -105,6 +105,7 @@ export default function EditTraining() {
   });
   const [addedParticipants, setAddedParticipants] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isAadhaarValid = (value) => /^\d{12}$/.test(value);
   const isEmailValid = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -419,10 +420,16 @@ export default function EditTraining() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" />
+      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
-        <PageTopBar title="Edit Training Event" />
         <div className="top-nav">
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h2 className="nav-title">Edit Training Event</h2>
         </div>
 

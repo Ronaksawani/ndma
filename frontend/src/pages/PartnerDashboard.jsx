@@ -6,6 +6,7 @@ import {
   FiClock,
   FiFilter,
   FiMap,
+  FiMenu,
 } from "react-icons/fi";
 import {
   MapContainer,
@@ -18,7 +19,6 @@ import "leaflet/dist/leaflet.css";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { trainingAPI } from "../utils/api";
 import disasterRiskData from "../data/disaster_risk_dataset_india.json";
 import districtCoordsData from "../data/district_coords.json";
@@ -145,6 +145,7 @@ export default function PartnerDashboard() {
   const [showAllRecommendationPoints, setShowAllRecommendationPoints] =
     useState(false);
   const [showActivitiesPanel, setShowActivitiesPanel] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [seenTrainingActivityKeys, setSeenTrainingActivityKeys] = useState(
     () => {
       try {
@@ -846,14 +847,16 @@ export default function PartnerDashboard() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" />
+      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
-        <PageTopBar
-          title={`Partner Dashboard - ${user?.organizationName || ""}`}
-          notificationCount={unreadTrainingActivityCount}
-          onNotificationsClick={() => setShowActivitiesPanel((prev) => !prev)}
-        />
         <div className="top-nav">
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h2 className="nav-title">
             Partner Dashboard - {user?.organizationName}
           </h2>

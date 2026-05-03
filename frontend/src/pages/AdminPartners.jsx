@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { partnerAPI } from "../utils/api";
 import styles from "../styles/AdminPartners.module.css";
-import { FiSearch } from "react-icons/fi";
+import { FiSearch, FiMenu } from "react-icons/fi";
 
 const AdminPartners = () => {
   const navigate = useNavigate();
@@ -12,6 +11,7 @@ const AdminPartners = () => {
   const [filteredPartners, setFilteredPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchPartners();
@@ -71,10 +71,16 @@ const AdminPartners = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="admin" />
+      <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.container}>
-        <PageTopBar title="Partner Organizations" />
         <div className={styles.header}>
+          <button 
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <div className={styles.headerContent}>
             <h1>Partner Organizations</h1>
             <button

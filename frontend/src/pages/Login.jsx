@@ -21,9 +21,18 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await authAPI.login(email, password, role);
+      const response =
+        role === "participant"
+          ? await authAPI.participantLogin(email, password)
+          : await authAPI.login(email, password, role);
       login(response.data.user, response.data.token);
-      navigate(role === "admin" ? "/admin/dashboard" : "/partner/dashboard");
+      navigate(
+        role === "admin"
+          ? "/admin/dashboard"
+          : role === "participant"
+            ? "/participant/dashboard"
+            : "/partner/dashboard",
+      );
     } catch (err) {
       setError(
         err.response?.data?.message || "Login failed. Please try again.",
@@ -64,6 +73,14 @@ export default function Login() {
             >
               Admin Login
             </button>
+            <button
+              className={`${styles["role-btn"]} ${
+                role === "participant" ? styles["active"] : ""
+              }`}
+              onClick={() => setRole("participant")}
+            >
+              Participant Login
+            </button>
           </div>
 
           {error && <div className="alert alert-danger">{error}</div>}
@@ -81,12 +98,16 @@ export default function Login() {
             </div>
 
             <div className={styles["login-form-group"]}>
-              <label>Password</label>
+              <label>
+                {role === "participant" ? "Aadhaar Number" : "Password"}
+              </label>
               <input
-                type="password"
+                type={role === "participant" ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={
+                  role === "participant" ? "Enter 12-digit Aadhaar" : "••••••••"
+                }
                 required
               />
             </div>
@@ -104,6 +125,19 @@ export default function Login() {
               {loading ? "Logging in..." : "Login"}
             </button>
           </form>
+
+          {role === "participant" && (
+            <div className={styles["login-footer"]}>
+              New Participant?{" "}
+              <button
+                type="button"
+                className={styles["participant-register-link"]}
+                onClick={() => navigate("/participant/register")}
+              >
+                Click here for Registration
+              </button>
+            </div>
+          )}
 
           {/* <div className={styles["login-footer"]}>
             <div>

@@ -20,8 +20,20 @@ api.interceptors.request.use((config) => {
 export const authAPI = {
   login: (email, password, role) =>
     api.post("/auth/login", { email, password, role }),
+  participantLogin: (email, aadhaarNumber) =>
+    api.post("/auth/participant-login", { email, aadhaarNumber }),
+  participantRegister: (data) => api.post("/auth/participant-register", data),
   register: (data) => api.post("/auth/register", data),
   refreshToken: () => api.post("/auth/refresh"),
+};
+
+export const participantAPI = {
+  getProfile: () => api.get("/auth/participant/profile"),
+  updateProfile: (data) => api.put("/auth/participant/profile", data),
+  getRecords: () => api.get("/auth/participant/records"),
+  getDashboard: () => api.get("/auth/participant/dashboard"),
+  getNotifications: () => api.get("/auth/participant/notifications"),
+  markNotificationAsRead: (id) => api.patch(`/auth/participant/notifications/${id}/read`),
 };
 
 export const trainingAPI = {
@@ -33,6 +45,8 @@ export const trainingAPI = {
   delete: (id) => api.delete(`/trainings/${id}`),
   updateStatus: (id, status, reason = "") =>
     api.patch(`/trainings/${id}/status`, { status, reason }),
+  register: (id) => api.post(`/trainings/${id}/register`),
+  cancelRegistration: (id) => api.post(`/trainings/${id}/cancel-registration`),
 };
 
 export const partnerAPI = {

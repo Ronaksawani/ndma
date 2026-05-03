@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { trainingAPI } from "../utils/api";
 import styles from "../styles/AdminReviewTraining.module.css";
 import { FiChevronLeft, FiChevronRight, FiDownload } from "react-icons/fi";
@@ -145,7 +144,6 @@ const AdminReviewTraining = () => {
     <div className={styles.layout}>
       <Sidebar role="admin" />
       <div className={styles.container}>
-        <PageTopBar title="Review Training" />
         <div className={styles.navigationBar}>
           <button
             className={styles.navButton}

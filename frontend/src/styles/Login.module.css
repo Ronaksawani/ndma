@@ -136,6 +136,20 @@
   text-decoration: underline;
 }
 
+.participant-register-link {
+  border: none;
+  background: transparent;
+  color: var(--primary-color);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.participant-register-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 480px) {
   .login-card {
     padding: 25px;

@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { FiMenu } from "react-icons/fi";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { analyticsAPI, trainingAPI } from "../utils/api";
 import statesData from "../data/statesDistricts.json";
 import styles from "../styles/AdminReports.module.css";
@@ -39,6 +38,7 @@ const AdminReports = () => {
     state: "all",
     status: "all",
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Color palette for charts
   const colors = [
@@ -96,8 +96,8 @@ const AdminReports = () => {
       console.log("Processed State Data:", stateData);
       setParticipantsByState(stateData);
 
-        // Process monthly training trends (group by month from all trainings)
-        const monthlyData = await processMonthlyTrends();
+      // Process monthly training trends (group by month from all trainings)
+      const monthlyData = await processMonthlyTrends(dashboardData);
       setTrainingsByMonth(monthlyData);
 
       // Set gap analysis
@@ -108,16 +108,14 @@ const AdminReports = () => {
       const totalParticipants = dashboardData.totalParticipants;
       const statesCovered = dashboardData.statesCovered;
 
-      // Fetch all trainings to calculate approval/rejection rates
-      const trainingsRes = await trainingAPI.getAll({ limit: 1000 });
+      // Fetch all trainings to calculate completion rates
+      const trainingsRes = await trainingAPI.getAll({ status: "approved" });
       const allTrainings = trainingsRes.data.trainings || [];
 
-      const approvedTrainings = allTrainings.filter(
-        (t) => t.status === "approved",
+      const completedTrainings = allTrainings.filter(
+        (t) => t.endDate && new Date(t.endDate) < new Date(),
       ).length;
-      const rejectedTrainings = allTrainings.filter(
-        (t) => t.status === "rejected",
-      ).length;
+      const plannedTrainings = totalTrainings - completedTrainings;
 
       // Get partner count (approximate from recent activities)
       const uniquePartners = new Set(
@@ -126,8 +124,8 @@ const AdminReports = () => {
 
       setReportData({
         totalTrainings,
-        approvedTrainings,
-        rejectedTrainings,
+        completedTrainings,
+        plannedTrainings,
         totalParticipants,
         governmentAgencies: dashboardData.activePartners || 0,
         ngoOrganizations: Math.floor((dashboardData.activePartners || 0) * 0.6),
@@ -146,8 +144,8 @@ const AdminReports = () => {
       // Fallback to basic data if API fails
       setReportData({
         totalTrainings: 0,
-        approvedTrainings: 0,
-        rejectedTrainings: 0,
+        completedTrainings: 0,
+        plannedTrainings: 0,
         totalParticipants: 0,
         governmentAgencies: 0,
         ngoOrganizations: 0,
@@ -160,56 +158,57 @@ const AdminReports = () => {
     }
   };
 
-  const processMonthlyTrends = async () => {
+  const processMonthlyTrends = async (dashboardData) => {
     try {
       // Fetch all trainings to get real monthly trend data
-      const trainingsRes = await trainingAPI.getAll({ limit: 1000 });
+      const trainingsRes = await trainingAPI.getAll({ status: "approved" });
       const allTrainings = trainingsRes.data.trainings || [];
 
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
       const monthCounts = {
-        "01": { approved: 0, rejected: 0 },
-        "02": { approved: 0, rejected: 0 },
-        "03": { approved: 0, rejected: 0 },
-        "04": { approved: 0, rejected: 0 },
-        "05": { approved: 0, rejected: 0 },
-        "06": { approved: 0, rejected: 0 },
+        "01": { completed: 0, planned: 0 },
+        "02": { completed: 0, planned: 0 },
+        "03": { completed: 0, planned: 0 },
+        "04": { completed: 0, planned: 0 },
+        "05": { completed: 0, planned: 0 },
+        "06": { completed: 0, planned: 0 },
       };
 
       const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
       const sixMonthsAgo = new Date(currentDate);
       sixMonthsAgo.setMonth(currentDate.getMonth() - 5);
 
       allTrainings.forEach((training) => {
         const startDate = new Date(training.startDate);
+        const endDate = new Date(training.endDate);
+
         // Only include trainings from last 6 months
         if (startDate >= sixMonthsAgo) {
           const month = String(startDate.getMonth() + 1).padStart(2, "0");
 
-          if (training.status === "approved" && monthCounts[month]) {
-            monthCounts[month].approved += 1;
-          }
-
-          if (training.status === "rejected" && monthCounts[month]) {
-            monthCounts[month].rejected += 1;
+          // Check if training is completed
+          if (endDate < currentDate && training.status === "approved") {
+            if (monthCounts[month]) monthCounts[month].completed += 1;
+          } else {
+            if (monthCounts[month]) monthCounts[month].planned += 1;
           }
         }
       });
 
       return months.map((month, idx) => ({
         month,
-        approved:
-          monthCounts[String(idx + 1).padStart(2, "0")]?.approved || 0,
-        rejected:
-          monthCounts[String(idx + 1).padStart(2, "0")]?.rejected || 0,
+        completed:
+          monthCounts[String(idx + 1).padStart(2, "0")]?.completed || 0,
+        planned: monthCounts[String(idx + 1).padStart(2, "0")]?.planned || 0,
       }));
     } catch (error) {
       console.error("Error processing monthly trends:", error);
       // Fallback to mock data
       return ["Jan", "Feb", "Mar", "Apr", "May", "Jun"].map((month) => ({
         month,
-        approved: 0,
-        rejected: 0,
+        completed: 0,
+        planned: 0,
       }));
     }
   };
@@ -287,8 +286,8 @@ const AdminReports = () => {
 
       const stats = [
         `Total Trainings: ${reportData.totalTrainings}`,
-        `Approved Trainings: ${reportData.approvedTrainings}`,
-        `Rejected Trainings: ${reportData.rejectedTrainings}`,
+        `Completed Trainings: ${reportData.completedTrainings}`,
+        `Planned Trainings: ${reportData.plannedTrainings}`,
         `Total Participants: ${reportData.totalParticipants.toLocaleString()}`,
         `States Covered: ${reportData.statesCovered}`,
         `Certificates Issued: ${reportData.certificatesIssued}`,
@@ -332,8 +331,8 @@ const AdminReports = () => {
         [],
         ["Key Metrics", "Value"],
         ["Total Trainings", reportData.totalTrainings],
-        ["Approved Trainings", reportData.approvedTrainings],
-        ["Rejected Trainings", reportData.rejectedTrainings],
+        ["Completed Trainings", reportData.completedTrainings],
+        ["Planned Trainings", reportData.plannedTrainings],
         ["Total Participants", reportData.totalParticipants],
         ["States Covered", reportData.statesCovered],
         ["Certificates Issued", reportData.certificatesIssued],
@@ -385,8 +384,8 @@ const AdminReports = () => {
         [],
         ["Key Metrics", "Value"],
         ["Total Trainings", reportData.totalTrainings],
-        ["Approved Trainings", reportData.approvedTrainings],
-        ["Rejected Trainings", reportData.rejectedTrainings],
+        ["Completed Trainings", reportData.completedTrainings],
+        ["Planned Trainings", reportData.plannedTrainings],
         ["Total Participants", reportData.totalParticipants],
         ["States Covered", reportData.statesCovered],
         ["Certificates Issued", reportData.certificatesIssued],
@@ -478,11 +477,17 @@ const AdminReports = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="admin" />
+      <Sidebar role="admin" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className={styles.container}>
-        <PageTopBar title="Admin Reports" />
         {/* Header */}
         <div className={styles.header}>
+          <button 
+            className={styles.sidebarToggle}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <div>
             <h1>Reports & Analytics</h1>
             <p className={styles.headerSubtitle}>
@@ -527,9 +532,9 @@ const AdminReports = () => {
           <div className={styles.statCard}>
             <div className={styles.statIcon}>✅</div>
             <div className={styles.statContent}>
-              <p className={styles.statLabel}>Approved</p>
+              <p className={styles.statLabel}>Completed</p>
               <p className={styles.statValue}>
-                {reportData.approvedTrainings}
+                {reportData.completedTrainings}
               </p>
             </div>
           </div>
@@ -537,8 +542,8 @@ const AdminReports = () => {
           <div className={styles.statCard}>
             <div className={styles.statIcon}>📅</div>
             <div className={styles.statContent}>
-              <p className={styles.statLabel}>Rejected</p>
-              <p className={styles.statValue}>{reportData.rejectedTrainings}</p>
+              <p className={styles.statLabel}>Planned</p>
+              <p className={styles.statValue}>{reportData.plannedTrainings}</p>
             </div>
           </div>
 
@@ -576,7 +581,7 @@ const AdminReports = () => {
           {/* Training Trends Chart */}
           <div className={styles.chartBox}>
             <h2 className={styles.chartTitle}>
-              Approved vs Rejected Trainings (Last 6 Months)
+              Training Trends (Last 6 Months)
             </h2>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={trainingsByMonth}>
@@ -587,18 +592,18 @@ const AdminReports = () => {
                 <Legend />
                 <Line
                   type="monotone"
-                  dataKey="approved"
+                  dataKey="completed"
                   stroke="#667eea"
                   strokeWidth={2}
-                  name="Approved"
+                  name="Completed"
                   dot={{ fill: "#667eea" }}
                 />
                 <Line
                   type="monotone"
-                  dataKey="rejected"
+                  dataKey="planned"
                   stroke="#764ba2"
                   strokeWidth={2}
-                  name="Rejected"
+                  name="Planned"
                   dot={{ fill: "#764ba2" }}
                 />
               </LineChart>
@@ -715,16 +720,19 @@ const AdminReports = () => {
             </div>
           )}
 
-          {/* Low Coverage States */}
-          {gapAnalysis && gapAnalysis.lowCoverageStates && (
+          {/* Low Coverage Districts */}
+          {gapAnalysis && gapAnalysis.lowCoverageDistricts && (
             <div className={styles.statsBox}>
               <h2 className={styles.chartTitle}>
-                Low Coverage States (Priorities)
+                Low Coverage Districts (Priorities)
               </h2>
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ borderBottom: "2px solid #667eea" }}>
+                      <th style={{ textAlign: "left", padding: "0.75rem" }}>
+                        District
+                      </th>
                       <th style={{ textAlign: "left", padding: "0.75rem" }}>
                         State
                       </th>
@@ -734,10 +742,13 @@ const AdminReports = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {gapAnalysis.lowCoverageStates.map((state, idx) => (
+                    {gapAnalysis.lowCoverageDistricts.map((district, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid #eee" }}>
                         <td style={{ padding: "0.75rem" }}>
-                          {state._id || "N/A"}
+                          {district._id || "N/A"}
+                        </td>
+                        <td style={{ padding: "0.75rem" }}>
+                          {district.state || "N/A"}
                         </td>
                         <td
                           style={{
@@ -747,7 +758,7 @@ const AdminReports = () => {
                             fontWeight: "bold",
                           }}
                         >
-                          {state.count}
+                          {district.count}
                         </td>
                       </tr>
                     ))}

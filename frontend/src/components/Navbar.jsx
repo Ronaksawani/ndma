@@ -117,7 +117,11 @@ export default function Navbar() {
                     {user?.contactPerson || user?.email}
                   </span>
                   <span className={styles["user-role"]}>
-                    {user?.role === "partner" ? "Partner" : "Admin"}
+                    {user?.role === "partner"
+                      ? "Partner"
+                      : user?.role === "participant"
+                        ? "Participant"
+                        : "Admin"}
                   </span>
                 </div>
                 <button

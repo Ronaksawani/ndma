@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { FiMenu } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
-import PageTopBar from "../components/PageTopBar";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import styles from "../styles/Dashboard.module.css";
 import statesDistrictsData from "../data/statesDistricts.json";
@@ -37,6 +37,7 @@ export default function Profile() {
   });
 
   const [districts, setDistricts] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Helper function to format organization type
   const getOrganizationTypeLabel = (type) => {
@@ -148,12 +149,16 @@ export default function Profile() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" />
+      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
-        <PageTopBar
-          title={`Partner Profile Settings - ${user?.organizationName || "[Organization Name]"}`}
-        />
         <div className="top-nav">
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle sidebar"
+          >
+            <FiMenu size={24} />
+          </button>
           <h2 className="nav-title">
             Partner Profile Settings -{" "}
             {user?.organizationName || "[Organization Name]"}
