@@ -69,6 +69,7 @@ export default function ViewTraining() {
   const [training, setTraining] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
   useEffect(() => {
     fetchTrainingData();
@@ -414,7 +415,7 @@ export default function ViewTraining() {
               )}
 
               {/* Attendance Sheet Download */}
-              {training.attendanceSheet && (
+              {training.attendanceSheet && training.partnerId === loggedInUser?._id && (
                 <div className={styles["form-section"]}>
                   <h3 className={styles["form-section-title"]}>
                     Attendance Sheet
@@ -462,7 +463,7 @@ export default function ViewTraining() {
                 >
                   Back to My Trainings
                 </button>
-                <button
+                {/* <button
                   type="button"
                   className={
                     styles["form-btn"] + " " + styles["form-btn-submit"]
@@ -470,7 +471,7 @@ export default function ViewTraining() {
                   onClick={() => navigate(`/partner/edit-training/${id}`)}
                 >
                   Edit Training
-                </button>
+                </button> */}
               </div>
             </div>
           </div>

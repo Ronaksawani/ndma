@@ -1051,7 +1051,7 @@ export default function PartnerDashboard() {
                                   type="button"
                                   className={styles["schedule-btn"]}
                                   onClick={() =>
-                                    navigate("/partner/add-training")
+                                    navigate("/partner/schedule-training")
                                   }
                                 >
                                   Schedule Training

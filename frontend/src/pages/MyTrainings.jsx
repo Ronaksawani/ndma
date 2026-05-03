@@ -673,7 +673,7 @@ export default function MyTrainings() {
                           </td>
                           <td style={{ padding: "12px" }}>
                             <div style={{ display: "flex", gap: "8px" }}>
-                              {!showOtherPartnersTrainings && (
+                              {!showOtherPartnersTrainings && !(training.status === "approved") && (
                                 <button
                                   onClick={() => handleEdit(training._id)}
                                   style={{
