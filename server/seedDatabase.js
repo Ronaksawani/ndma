@@ -243,20 +243,44 @@ async function seedDatabase() {
         console.log("   ✓ Training Event IDs mapped to participants");
       }
 
-      const deletedParticipants = await Participant.deleteMany({});
-      console.log(
-        `   Deleted ${deletedParticipants.deletedCount} existing participants`,
-      );
+      // Consolidate per-registration participant entries into single Participant docs with trainings[]
+      const grouped = {};
+      for (const p of participantsData) {
+        const key = p.aadhaarNumber || (p.email && p.email.toLowerCase()) || p.fullName;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(p);
+      }
 
-      const insertedParticipants = await Participant.insertMany(
-        participantsData,
-        {
-          ordered: false,
-        },
-      );
-      console.log(
-        `✓ ${insertedParticipants.length} participants uploaded successfully\n`,
-      );
+      const consolidated = Object.values(grouped).map((items) => {
+        const first = items[0];
+        const trainings = items.map((it) => ({
+          trainingId: it.trainingId,
+          trainingTitle: it.trainingTitle,
+          trainingTheme: it.trainingTheme,
+          trainingDates: it.trainingDates,
+          organization: it.organization,
+          certificateIssued: !!it.certificateIssued,
+          certificateIssuedAt: it.certificateIssuedAt || undefined,
+          certificateUrl: it.certificateUrl || undefined,
+          createdAt: it.createdAt || new Date(),
+        }));
+
+        return {
+          fullName: first.fullName || '',
+          aadhaarNumber: first.aadhaarNumber || undefined,
+          email: first.email ? first.email.toLowerCase() : undefined,
+          phone: first.phone || undefined,
+          organization: first.organization || undefined,
+          trainings,
+          createdAt: first.createdAt || new Date(),
+        };
+      });
+
+      const deletedParticipants = await Participant.deleteMany({});
+      console.log(`   Deleted ${deletedParticipants.deletedCount} existing participants`);
+
+      const insertedParticipants = await Participant.insertMany(consolidated, { ordered: false });
+      console.log(`✓ ${insertedParticipants.length} participants uploaded successfully\n`);
     }
 
     // Summary
@@ -312,13 +336,10 @@ async function seedDatabase() {
     }
 
     console.log("\n👤 Participant-Training Event Mappings:");
-    const participants = await Participant.find().select(
-      "_id fullName trainingId trainingTitle",
-    );
+    const participants = await Participant.find().select("_id fullName trainings");
     participants.forEach((participant) => {
-      console.log(
-        `   ${participant.fullName} (${participant.trainingTitle}) → Training: ${participant.trainingId}`,
-      );
+      const first = (participant.trainings || [])[0];
+      console.log(`   ${participant.fullName} → Trainings: ${(participant.trainings || []).length} ${first ? `(${first.trainingTitle})` : ''}`);
     });
 
     console.log("\n✓ All ID mappings are correctly established!\n");

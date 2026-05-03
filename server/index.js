@@ -40,26 +40,17 @@ app.use((req, res, next) => {
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/DTM";
 
-async function startServer() {
-  try {
-    console.log("🔌 Attempting MongoDB connection...");
-    await mongoose.connect(MONGODB_URI);
+console.log("🔌 Attempting MongoDB connection...");
+
+mongoose
+  .connect(MONGODB_URI)
+  .then(() => {
     console.log("✅ MongoDB connected successfully");
-
-    // =====================
-    // SERVER START
-    // =====================
-    const PORT = process.env.PORT || 4000;
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  } catch (err) {
+  })
+  .catch((err) => {
     console.error("❌ MongoDB connection failed:");
     console.error(err.message);
-    process.exitCode = 1;
-  }
-}
+  });
 
 // =====================
 // ROUTES
@@ -97,6 +88,29 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === "development" ? err : {},
   });
 });
+
+// =====================
+// SERVER START — start only after successful DB connection
+// =====================
+const PORT = process.env.PORT || 4000;
+
+async function startServer() {
+  try {
+    // Wait for mongoose to connect (already initiated above)
+    // If not connected yet, await the connection
+    if (mongoose.connection.readyState !== 1) {
+      console.log("⏳ Waiting for MongoDB connection before starting server...");
+      await mongoose.connection.asPromise();
+    }
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Failed to start server:", err.message);
+    process.exit(1);
+  }
+}
 
 startServer();
 

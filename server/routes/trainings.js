@@ -81,12 +81,22 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "Training not found" });
     }
 
-    // Fetch participants for this training
-    const db = require("mongoose").connection;
-    const participants = await db
-      .collection("participants")
-      .find({ trainingId: training._id })
-      .toArray();
+    // Fetch participants for this training from consolidated Participant documents
+    const Participant = require("../models/Participant.js");
+    const participantDocs = await Participant.find({
+      "trainings.trainingId": training._id,
+    }).lean();
+
+    // Map to include only the relevant training entry per participant
+    const participants = participantDocs.map((p) => {
+      const t = p.trainings.find((tt) => tt.trainingId && tt.trainingId.toString() === training._id.toString());
+      return {
+        participantId: p._id,
+        email: p.email,
+        name: p.fullName,
+        training: t || null,
+      };
+    });
 
     res.json({
       ...training.toObject(),
@@ -265,39 +275,53 @@ router.post("/", auth, async (req, res) => {
 
     await training.save();
 
-    // Save participants to the participants collection if provided
+    // Save participants to consolidated Participant documents if provided
     if (participants) {
       try {
         const participantsArray =
           typeof participants === "string"
             ? JSON.parse(participants)
             : participants;
-        const db = require("mongoose").connection;
         const Partner = require("../models/Partner");
         const partnerDoc = await Partner.findOne({ userId: req.user.userId });
         const organizationName =
           partnerDoc?.organizationName || "Training Organization";
 
-        // Add training info to each participant and save to participants collection
-        const participantDocs = participantsArray.map((participant) => ({
-          ...participant,
-          trainingId: training._id,
-          trainingTitle: title,
-          trainingTheme: theme,
-          trainingDates: { start: startDate, end: endDate },
-          organization: organizationName,
-          certificateIssued: true,
-          certificateIssuedAt: new Date(),
-          createdAt: new Date(),
-        }));
+        const Participant = require("../models/Participant.js");
 
-        console.log("Saving participants:", participantDocs);
+        for (const p of participantsArray) {
+          const filter = {};
+          if (p.aadhaarNumber) filter.aadhaarNumber = p.aadhaarNumber;
+          else if (p.email) filter.email = p.email.toLowerCase();
 
-        if (participantDocs.length > 0) {
-          await db.collection("participants").insertMany(participantDocs);
-          console.log(
-            `Successfully saved ${participantDocs.length} participants`,
-          );
+          const trainingEntry = {
+            trainingId: training._id,
+            trainingTitle: title,
+            trainingTheme: theme,
+            trainingDates: { start: startDate, end: endDate },
+            organization: organizationName,
+            certificateIssued: true,
+            certificateIssuedAt: new Date(),
+            createdAt: new Date(),
+          };
+
+          if (Object.keys(filter).length) {
+            const existing = await Participant.findOne(filter);
+            if (existing) {
+              existing.trainings.push(trainingEntry);
+              await existing.save();
+            } else {
+              const newP = new Participant({
+                fullName: p.fullName || "",
+                aadhaarNumber: p.aadhaarNumber || undefined,
+                email: p.email ? p.email.toLowerCase() : undefined,
+                phone: p.phone || undefined,
+                organization: p.organization || organizationName,
+                trainings: [trainingEntry],
+              });
+              await newP.save();
+            }
+          }
         }
       } catch (e) {
         console.log("Participants saving error:", e.message);
@@ -427,32 +451,48 @@ router.put("/:id", auth, async (req, res) => {
         const organizationName =
           partnerDoc?.organizationName || "Training Organization";
 
-        // Delete old participants for this training
-        await db
-          .collection("participants")
-          .deleteMany({ trainingId: training._id });
+        // Remove any existing training entries for this training across participants
+        const Participant = require("../models/Participant.js");
+        await Participant.updateMany({}, { $pull: { trainings: { trainingId: training._id } } });
 
-        // Add updated participants
-        const participantDocs = participantsArray.map((participant) => ({
-          ...participant,
-          trainingId: training._id,
-          trainingTitle: title || training.title,
-          trainingTheme: theme || training.theme,
-          trainingDates: {
-            start: startDate || training.startDate,
-            end: endDate || training.endDate,
-          },
-          organization: organizationName,
-          certificateIssued: true,
-          certificateIssuedAt: new Date(),
-          createdAt: new Date(),
-        }));
+        // Add updated participants into consolidated Participant documents
+        for (const participant of participantsArray) {
+          const filter = {};
+          if (participant.aadhaarNumber) filter.aadhaarNumber = participant.aadhaarNumber;
+          else if (participant.email) filter.email = participant.email.toLowerCase();
 
-        if (participantDocs.length > 0) {
-          await db.collection("participants").insertMany(participantDocs);
-          console.log(
-            `Successfully updated ${participantDocs.length} participants`,
-          );
+          const trainingEntry = {
+            trainingId: training._id,
+            trainingTitle: title || training.title,
+            trainingTheme: theme || training.theme,
+            trainingDates: {
+              start: startDate || training.startDate,
+              end: endDate || training.endDate,
+            },
+            organization: organizationName,
+            certificateIssued: true,
+            certificateIssuedAt: new Date(),
+            createdAt: new Date(),
+          };
+
+          if (Object.keys(filter).length) {
+            const existing = await Participant.findOne(filter);
+            if (existing) {
+              existing.trainings = existing.trainings || [];
+              existing.trainings.push(trainingEntry);
+              await existing.save();
+            } else {
+              const newP = new Participant({
+                fullName: participant.fullName || "",
+                aadhaarNumber: participant.aadhaarNumber || undefined,
+                email: participant.email ? participant.email.toLowerCase() : undefined,
+                phone: participant.phone || undefined,
+                organization: participant.organization || organizationName,
+                trainings: [trainingEntry],
+              });
+              await newP.save();
+            }
+          }
         }
       } catch (e) {
         console.log("Participants update error:", e.message);
@@ -461,11 +501,17 @@ router.put("/:id", auth, async (req, res) => {
     }
 
     // Fetch updated participants and return
-    const db = require("mongoose").connection;
-    const updatedParticipants = await db
-      .collection("participants")
-      .find({ trainingId: training._id })
-      .toArray();
+    const Participant = require("../models/Participant.js");
+    const participantDocs = await Participant.find({ "trainings.trainingId": training._id }).lean();
+    const updatedParticipants = participantDocs.map((p) => {
+      const t = p.trainings.find((tt) => tt.trainingId && tt.trainingId.toString() === training._id.toString());
+      return {
+        participantId: p._id,
+        email: p.email,
+        name: p.fullName,
+        training: t || null,
+      };
+    });
 
     res.json({
       message: "Training updated successfully",
@@ -544,6 +590,190 @@ router.delete("/:id", auth, async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to delete training", error: error.message });
+  }
+});
+
+// Register participant for training
+router.post("/:id/register", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "participant") {
+      return res.status(403).json({ message: "Only participants can register" });
+    }
+
+    const training = await TrainingEvent.findById(req.params.id);
+    if (!training) {
+      return res.status(404).json({ message: "Training not found" });
+    }
+
+    const Participant = require("../models/Participant.js");
+
+    // Find or create participant profile and add training entry
+    const email = req.user.email.toLowerCase();
+    let participant = await Participant.findOne({ email });
+
+    const already = participant?.trainings?.find(
+      (t) => t.trainingId && t.trainingId.toString() === req.params.id && t.status !== "cancelled",
+    );
+    if (already) {
+      return res.status(400).json({ message: "Already registered for this training" });
+    }
+
+    const trainingEntry = {
+      trainingId: training._id,
+      trainingTitle: training.title,
+      trainingTheme: training.theme,
+      trainingDates: { start: training.startDate, end: training.endDate },
+      organization: training.partnerId.toString(),
+      status: "registered",
+      createdAt: new Date(),
+    };
+
+    if (!participant) {
+      participant = new Participant({
+        fullName: req.user.fullName || "",
+        email,
+        aadhaarNumber: req.user.aadhaarNumber || undefined,
+        phone: req.user.phone || undefined,
+        trainings: [trainingEntry],
+      });
+    } else {
+      participant.trainings = participant.trainings || [];
+      participant.trainings.push(trainingEntry);
+    }
+
+    await participant.save();
+
+    // Add to training's registered participants
+    training.registeredParticipants.push({
+      participantId: participant._id,
+      email,
+      name: participant.fullName || req.user.fullName || "Participant",
+      registeredAt: new Date(),
+      status: "registered",
+    });
+
+    await training.save();
+
+    // Create notification
+    const Notification = require("../models/Notification.js");
+    const notification = new Notification({
+      recipientEmail: req.user.email,
+      type: "registration_confirmed",
+      title: "Registration Confirmed",
+      message: `You have successfully registered for ${training.title}`,
+      trainingId: training._id,
+      data: {
+        trainingTitle: training.title,
+        trainingDate: training.startDate,
+      },
+    });
+
+    await notification.save();
+
+    res.status(201).json({
+      message: "Successfully registered for training",
+      registration: {
+        id: participant._id,
+        trainingId: training._id,
+        title: training.title,
+        startDate: training.startDate,
+      },
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to register for training", error: error.message });
+  }
+});
+
+// Cancel registration
+router.post("/:id/cancel-registration", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "participant") {
+      return res.status(403).json({ message: "Only participants can cancel" });
+    }
+    const Participant = require('../models/Participant.js');
+
+    // Find participant and the matching training entry
+    const email = req.user.email.toLowerCase();
+    const participant = await Participant.findOne({
+      email,
+      'trainings.trainingId': req.params.id,
+      'trainings.status': 'registered',
+    });
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Registration not found or already cancelled' });
+    }
+
+    // Update the nested training entry to cancelled
+    await Participant.updateOne(
+      { email, 'trainings.trainingId': req.params.id, 'trainings.status': 'registered' },
+      { $set: { 'trainings.$.status': 'cancelled' } },
+    );
+
+    // Remove from training's registered participants
+    const training = await TrainingEvent.findById(req.params.id);
+    if (training) {
+      training.registeredParticipants = training.registeredParticipants.filter(
+        (rp) => rp.participantId.toString() !== participant._id.toString(),
+      );
+      await training.save();
+    }
+
+    // Create notification
+    const Notification = require("../models/Notification.js");
+    const notification = new Notification({
+      recipientEmail: req.user.email,
+      type: "training_cancelled",
+      title: "Registration Cancelled",
+      message: `Your registration for ${participant.trainingTitle} has been cancelled`,
+      trainingId: req.params.id,
+      data: {
+        trainingTitle: participant.trainingTitle,
+      },
+    });
+
+    await notification.save();
+
+    res.json({
+      message: "Registration cancelled successfully",
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to cancel registration", error: error.message });
+  }
+});
+
+// Get training by ID with registration status
+router.get("/:id", optionalAuth, async (req, res) => {
+  try {
+    const training = await TrainingEvent.findById(req.params.id);
+    if (!training) {
+      return res.status(404).json({ message: "Training not found" });
+    }
+
+    let isRegistered = false;
+      if (req.user && req.user.role === "participant") {
+        const Participant = require("../models/Participant.js");
+        const reg = await Participant.findOne({
+          email: req.user.email.toLowerCase(),
+          "trainings.trainingId": req.params.id,
+          "trainings.status": "registered",
+        });
+        isRegistered = !!reg;
+    }
+
+    res.json({
+      ...training.toObject(),
+      isRegistered,
+      registrationCount: training.registeredParticipants?.length || 0,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch training", error: error.message });
   }
 });
 

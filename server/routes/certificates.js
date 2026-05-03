@@ -15,55 +15,44 @@ router.get("/verify/:aadhaarNumber", async (req, res) => {
       });
     }
 
-    // Access MongoDB directly through the connection
-    const db = require("mongoose").connection;
-    
-    // Search for participant with matching Aadhaar in the participants collection
-    const participant = await db.collection("participants").findOne({
-      aadhaarNumber: aadhaarNumber,
-    });
-
-    console.log("Searching for Aadhaar:", aadhaarNumber);
-    console.log("Found participant:", participant);
+    // Use Participant model to find consolidated participant document
+    const Participant = require("../models/Participant");
+    const participant = await Participant.findOne({ aadhaarNumber }).lean();
 
     if (!participant) {
-      return res.status(404).json({
-        success: false,
-        verified: false,
-        message: "Certificate not found. Please check the Aadhaar number.",
-      });
+      return res.status(404).json({ success: false, verified: false, message: "Certificate not found. Please check the Aadhaar number." });
     }
 
-    // Fetch training details if trainingId exists
-    let trainingDetails = null;
-    if (participant.trainingId) {
-      const TrainingEvent = require("../models/TrainingEvent");
-      trainingDetails = await TrainingEvent.findById(participant.trainingId);
-    }
+    // Collect all trainings that have certificates
+    const trainingsWithCert = (participant.trainings || []).filter((t) => t.certificateIssued);
 
-    // Format the response - participant found is considered verified
-    const response = {
+    // Enrich with training event details where possible
+    const TrainingEvent = require("../models/TrainingEvent");
+    const enriched = await Promise.all(
+      trainingsWithCert.map(async (t) => {
+        let trainingDetails = null;
+        if (t.trainingId) trainingDetails = await TrainingEvent.findById(t.trainingId).lean();
+        return {
+          trainingTitle: t.trainingTitle || (trainingDetails ? trainingDetails.title : "N/A"),
+          trainingTheme: t.trainingTheme || (trainingDetails ? trainingDetails.theme : "N/A"),
+          trainingDates: t.trainingDates || (trainingDetails ? { start: trainingDetails.startDate, end: trainingDetails.endDate } : {}),
+          organization: t.organization || (trainingDetails ? trainingDetails.partnerId : "N/A"),
+          certificateIssuedAt: t.certificateIssuedAt,
+          certificateUrl: t.certificateUrl,
+          trainingLocation: trainingDetails ? trainingDetails.location : {},
+        };
+      }),
+    );
+
+    res.json({
       success: true,
-      verified: true, // If participant exists, certificate is verified
+      verified: enriched.length > 0,
       aadhaarNumber: participant.aadhaarNumber,
       fullName: participant.fullName,
       email: participant.email,
       phone: participant.phone,
-      trainingTitle: participant.trainingTitle || "N/A",
-      trainingTheme: participant.trainingTheme || "N/A",
-      trainingDates: participant.trainingDates || "N/A",
-      organization: participant.organization || "N/A",
-      certificateIssuedAt: participant.certificateIssuedAt || new Date(),
-    };
-
-    // Add training details if available
-    if (trainingDetails) {
-      response.trainingLocation = trainingDetails.location || {};
-      response.startDate = trainingDetails.startDate;
-      response.endDate = trainingDetails.endDate;
-    }
-
-    res.json(response);
+      certificates: enriched,
+    });
   } catch (error) {
     console.error("Certificate verification error:", error);
     res.status(500).json({
