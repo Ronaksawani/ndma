@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiEdit2, FiEye, FiMenu, FiSearch } from "react-icons/fi";
-import { FiEdit2, FiEye, FiSearch, FiSend, FiXCircle } from "react-icons/fi";
+import { FiEdit2, FiEye, FiSearch, FiMenu, FiSend, FiXCircle } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI } from "../utils/api";
