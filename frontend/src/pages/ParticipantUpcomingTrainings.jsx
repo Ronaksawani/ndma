@@ -78,7 +78,11 @@ export default function ParticipantUpcomingTrainings() {
         participantAPI.getProfile().catch(() => ({ data: {} })),
       ]);
 
-      setTrainings(dashboardRes.data?.nearbyTrainings || dashboardRes.data?.upcomingTrainings || []);
+      setTrainings(
+        dashboardRes.data?.nearbyTrainings ||
+          dashboardRes.data?.upcomingTrainings ||
+          [],
+      );
       setNearbyDistricts(profileRes.data?.nearbyDistricts || []);
     } catch (error) {
       console.error(error);
@@ -90,22 +94,25 @@ export default function ParticipantUpcomingTrainings() {
   const applyFilters = () => {
     let filtered = trainings;
 
+    // Filter by status - only show upcoming and ongoing trainings
+    filtered = filtered.filter(
+      (t) => t.status === "upcoming" || t.status === "ongoing",
+    );
+
     // Search filter - title only
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        t => t.title.toLowerCase().includes(term)
-      );
+      filtered = filtered.filter((t) => t.title.toLowerCase().includes(term));
     }
 
     // State filter
     if (filters.state) {
-      filtered = filtered.filter(t => t.location?.state === filters.state);
+      filtered = filtered.filter((t) => t.location?.state === filters.state);
     }
 
     // Theme (Disaster Type) filter
     if (filters.theme) {
-      filtered = filtered.filter(t => t.theme === filters.theme);
+      filtered = filtered.filter((t) => t.theme === filters.theme);
     }
 
     setFilteredTrainings(filtered);
@@ -136,7 +143,10 @@ export default function ParticipantUpcomingTrainings() {
       setSelectedTraining(updatedTraining.data);
     } catch (error) {
       console.error("Registration failed:", error);
-      alert(error.response?.data?.message || "Registration failed. Please try again.");
+      alert(
+        error.response?.data?.message ||
+          "Registration failed. Please try again.",
+      );
     } finally {
       setDetailLoading(false);
     }
@@ -150,12 +160,14 @@ export default function ParticipantUpcomingTrainings() {
   };
 
   const getAvailableThemes = () => {
-    const themes = new Set(trainings.map(t => t.theme).filter(Boolean));
+    const themes = new Set(trainings.map((t) => t.theme).filter(Boolean));
     return Array.from(themes).sort();
   };
 
   const getAvailableStates = () => {
-    const states = new Set(trainings.map(t => t.location?.state).filter(Boolean));
+    const states = new Set(
+      trainings.map((t) => t.location?.state).filter(Boolean),
+    );
     return Array.from(states).sort();
   };
 
@@ -181,7 +193,9 @@ export default function ParticipantUpcomingTrainings() {
           <div className={styles.trainingHeader}>
             <div>
               <h1 className={styles.trainingDetailTitle}>Training Details</h1>
-              <p className={styles.trainingThemeDetail}>Loading selected training...</p>
+              <p className={styles.trainingThemeDetail}>
+                Loading selected training...
+              </p>
             </div>
           </div>
         </div>
@@ -194,7 +208,9 @@ export default function ParticipantUpcomingTrainings() {
           <div className={styles.trainingHeader}>
             <div>
               <h1 className={styles.trainingDetailTitle}>Training Details</h1>
-              <p className={styles.trainingThemeDetail}>{detailError || "Training not found."}</p>
+              <p className={styles.trainingThemeDetail}>
+                {detailError || "Training not found."}
+              </p>
             </div>
           </div>
         </div>
@@ -211,6 +227,13 @@ export default function ParticipantUpcomingTrainings() {
         (participant) => participant.email?.toLowerCase() === currentUserEmail,
       );
 
+    // Check if training is at full capacity
+    const registeredCount = training.registeredParticipants?.length || 0;
+    const isFull =
+      training.participantsCount &&
+      training.participantsCount > 0 &&
+      registeredCount >= training.participantsCount;
+
     return (
       <div className={styles.trainingDetailContainer}>
         <div className={styles.trainingHeader}>
@@ -219,7 +242,7 @@ export default function ParticipantUpcomingTrainings() {
             <p className={styles.trainingThemeDetail}>{training.theme}</p>
           </div>
           <div className={styles.trainingActions}>
-            {isUpcoming && (
+            {isUpcoming && !isFull && (
               <button
                 onClick={handleRegister}
                 disabled={detailLoading || isAlreadyRegistered}
@@ -230,6 +253,15 @@ export default function ParticipantUpcomingTrainings() {
                   : isAlreadyRegistered
                     ? "Registered"
                     : "Register Now"}
+              </button>
+            )}
+            {isFull && (
+              <button
+                disabled
+                className={styles.registerBtn}
+                style={{ opacity: 0.5, cursor: "not-allowed" }}
+              >
+                Full
               </button>
             )}
           </div>
@@ -279,15 +311,21 @@ export default function ParticipantUpcomingTrainings() {
               <div className={styles.infoGrid}>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>State</span>
-                  <span className={styles.infoValue}>{training.location?.state}</span>
+                  <span className={styles.infoValue}>
+                    {training.location?.state}
+                  </span>
                 </div>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>District</span>
-                  <span className={styles.infoValue}>{training.location?.district}</span>
+                  <span className={styles.infoValue}>
+                    {training.location?.district}
+                  </span>
                 </div>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>City</span>
-                  <span className={styles.infoValue}>{training.location?.city}</span>
+                  <span className={styles.infoValue}>
+                    {training.location?.city}
+                  </span>
                 </div>
               </div>
               <p className={styles.address}>{training.location?.address}</p>
@@ -298,11 +336,15 @@ export default function ParticipantUpcomingTrainings() {
               <div className={styles.infoGrid}>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Name</span>
-                  <span className={styles.infoValue}>{training.trainerName || "-"}</span>
+                  <span className={styles.infoValue}>
+                    {training.trainerName || "-"}
+                  </span>
                 </div>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Email</span>
-                  <span className={styles.infoValue}>{training.trainerEmail || "-"}</span>
+                  <span className={styles.infoValue}>
+                    {training.trainerEmail || "-"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -312,11 +354,15 @@ export default function ParticipantUpcomingTrainings() {
               <div className={styles.infoGrid}>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Total Registered</span>
-                  <span className={styles.infoValue}>{training.registrationCount || 0}</span>
+                  <span className={styles.infoValue}>
+                    {training.registrationCount || 0}
+                  </span>
                 </div>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Capacity</span>
-                  <span className={styles.infoValue}>{training.participantsCount || "Unlimited"}</span>
+                  <span className={styles.infoValue}>
+                    {training.participantsCount || "Unlimited"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -328,15 +374,27 @@ export default function ParticipantUpcomingTrainings() {
                 <h3>🗺️ Map</h3>
                 <div className={styles.mapContainer}>
                   <MapContainer
-                    center={[training.location.latitude, training.location.longitude]}
+                    center={[
+                      training.location.latitude,
+                      training.location.longitude,
+                    ]}
                     zoom={13}
-                    style={{ height: "500px", width: "100%", borderRadius: "8px" }}
+                    style={{
+                      height: "500px",
+                      width: "100%",
+                      borderRadius: "8px",
+                    }}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    <Marker position={[training.location.latitude, training.location.longitude]}>
+                    <Marker
+                      position={[
+                        training.location.latitude,
+                        training.location.longitude,
+                      ]}
+                    >
                       <Popup>{training.title}</Popup>
                     </Marker>
                   </MapContainer>
@@ -367,10 +425,14 @@ export default function ParticipantUpcomingTrainings() {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="participant" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        role="participant"
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <main className={styles.main}>
         <header className={styles.topBar}>
-          <button 
+          <button
             className={styles.sidebarToggle}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
@@ -400,12 +462,16 @@ export default function ParticipantUpcomingTrainings() {
                     <label>State</label>
                     <select
                       value={filters.state}
-                      onChange={(e) => handleFilterChange("state", e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("state", e.target.value)
+                      }
                       className={styles.filterSelect}
                     >
                       <option value="">All States</option>
-                      {getAvailableStates().map(state => (
-                        <option key={state} value={state}>{state}</option>
+                      {getAvailableStates().map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -414,12 +480,16 @@ export default function ParticipantUpcomingTrainings() {
                     <label>Disaster Type</label>
                     <select
                       value={filters.theme}
-                      onChange={(e) => handleFilterChange("theme", e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("theme", e.target.value)
+                      }
                       className={styles.filterSelect}
                     >
                       <option value="">All Disaster Types</option>
-                      {getAvailableThemes().map(theme => (
-                        <option key={theme} value={theme}>{theme}</option>
+                      {getAvailableThemes().map((theme) => (
+                        <option key={theme} value={theme}>
+                          {theme}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -440,7 +510,8 @@ export default function ParticipantUpcomingTrainings() {
 
               {/* Results Count */}
               <div className={styles.resultsCount}>
-                Found {filteredTrainings.length} training{filteredTrainings.length !== 1 ? "s" : ""}
+                Found {filteredTrainings.length} training
+                {filteredTrainings.length !== 1 ? "s" : ""}
               </div>
 
               {/* Trainings List */}
@@ -484,7 +555,9 @@ export default function ParticipantUpcomingTrainings() {
                               {item.location?.district}, {item.location?.state}
                             </div>
                           </td>
-                          <td>{new Date(item.startDate).toLocaleDateString()}</td>
+                          <td>
+                            {new Date(item.startDate).toLocaleDateString()}
+                          </td>
                           <td>{new Date(item.endDate).toLocaleDateString()}</td>
                           <td>{item.trainerName || "-"}</td>
                           <td>
@@ -503,7 +576,10 @@ export default function ParticipantUpcomingTrainings() {
 
           {selectedTrainingId && (
             <div className={styles.trainingDetailSection}>
-              <button onClick={handleBackToTrainings} className={styles.backBtn}>
+              <button
+                onClick={handleBackToTrainings}
+                className={styles.backBtn}
+              >
                 ← Back to Training Details
               </button>
               {renderTrainingDetailPanel()}

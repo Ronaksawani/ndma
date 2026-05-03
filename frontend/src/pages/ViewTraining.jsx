@@ -415,42 +415,189 @@ export default function ViewTraining() {
               )}
 
               {/* Attendance Sheet Download */}
-              {training.attendanceSheet && training.partnerId === loggedInUser?._id && (
-                <div className={styles["form-section"]}>
-                  <h3 className={styles["form-section-title"]}>
-                    Attendance Sheet
-                  </h3>
-                  <button
-                    onClick={() =>
-                      downloadMedia(
-                        training.attendanceSheet.url,
-                        training.attendanceSheet.filename,
-                      )
-                    }
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "10px 16px",
-                      background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontWeight: "600",
-                      fontSize: "14px",
-                      cursor: "pointer",
-                      transition: "opacity 0.2s",
-                    }}
-                    onMouseEnter={(e) => (e.target.style.opacity = "0.9")}
-                    onMouseLeave={(e) => (e.target.style.opacity = "1")}
-                    title="Download attendance sheet"
-                  >
-                    <FiDownload /> Download ({training.attendanceSheet.filename}
-                    )
-                  </button>
-                </div>
-              )}
+              {training.attendanceSheet &&
+                training.partnerId === loggedInUser?._id && (
+                  <div className={styles["form-section"]}>
+                    <h3 className={styles["form-section-title"]}>
+                      Attendance Sheet
+                    </h3>
+                    <button
+                      onClick={() =>
+                        downloadMedia(
+                          training.attendanceSheet.url,
+                          training.attendanceSheet.filename,
+                        )
+                      }
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "10px 16px",
+                        background:
+                          "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "6px",
+                        fontWeight: "600",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        transition: "opacity 0.2s",
+                      }}
+                      onMouseEnter={(e) => (e.target.style.opacity = "0.9")}
+                      onMouseLeave={(e) => (e.target.style.opacity = "1")}
+                      title="Download attendance sheet"
+                    >
+                      <FiDownload /> Download (
+                      {training.attendanceSheet.filename})
+                    </button>
+                  </div>
+                )}
+
+              {/* Registered Participants */}
+              {training.registeredParticipants &&
+                training.registeredParticipants.length > 0 && (
+                  <div className={styles["form-section"]}>
+                    <h3 className={styles["form-section-title"]}>
+                      Registered Participants (
+                      {training.registeredParticipants.length})
+                    </h3>
+                    <div
+                      style={{
+                        overflowX: "auto",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      <table
+                        style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <thead>
+                          <tr
+                            style={{
+                              backgroundColor: "#f3f4f6",
+                              borderBottom: "2px solid #e5e7eb",
+                            }}
+                          >
+                            <th
+                              style={{
+                                padding: "12px",
+                                textAlign: "left",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Full Name
+                            </th>
+                            <th
+                              style={{
+                                padding: "12px",
+                                textAlign: "left",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Email
+                            </th>
+                            <th
+                              style={{
+                                padding: "12px",
+                                textAlign: "left",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Phone
+                            </th>
+                            <th
+                              style={{
+                                padding: "12px",
+                                textAlign: "left",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Aadhar ID
+                            </th>
+                            <th
+                              style={{
+                                padding: "12px",
+                                textAlign: "left",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Registered Date
+                            </th>
+                            <th
+                              style={{
+                                padding: "12px",
+                                textAlign: "left",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {training.registeredParticipants.map(
+                            (participant, idx) => (
+                              <tr
+                                key={idx}
+                                style={{ borderBottom: "1px solid #e5e7eb" }}
+                              >
+                                <td style={{ padding: "12px" }}>
+                                  {participant.name || "-"}
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                  {participant.email || "-"}
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                  {participant.phone || "-"}
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                  {participant.aadhaarNumber || "-"}
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                  {participant.registeredAt
+                                    ? new Date(
+                                        participant.registeredAt,
+                                      ).toLocaleDateString()
+                                    : "-"}
+                                </td>
+                                <td style={{ padding: "12px" }}>
+                                  <span
+                                    style={{
+                                      padding: "4px 8px",
+                                      borderRadius: "4px",
+                                      fontSize: "11px",
+                                      fontWeight: "600",
+                                      backgroundColor:
+                                        participant.status === "registered"
+                                          ? "#dbeafe"
+                                          : participant.status === "attended"
+                                            ? "#d1fae5"
+                                            : "#fee2e2",
+                                      color:
+                                        participant.status === "registered"
+                                          ? "#0284c7"
+                                          : participant.status === "attended"
+                                            ? "#10b981"
+                                            : "#ef4444",
+                                    }}
+                                  >
+                                    {participant.status
+                                      ?.charAt(0)
+                                      .toUpperCase() +
+                                      participant.status?.slice(1)}
+                                  </span>
+                                </td>
+                              </tr>
+                            ),
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
               {/* Form Actions */}
               <div className={styles["form-actions"]}>
@@ -463,6 +610,21 @@ export default function ViewTraining() {
                 >
                   Back to My Trainings
                 </button>
+                {training.status === "upcoming" && (
+                  <button
+                    type="button"
+                    className={
+                      styles["form-btn"] + " " + styles["form-btn-submit"]
+                    }
+                    onClick={() =>
+                      navigate("/partner/add-training", {
+                        state: { scheduledTrainingId: training._id },
+                      })
+                    }
+                  >
+                    Submit for Approval
+                  </button>
+                )}
                 {/* <button
                   type="button"
                   className={

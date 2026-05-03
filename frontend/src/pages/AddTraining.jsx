@@ -148,6 +148,22 @@ export default function AddTraining() {
           trainerEmail: training.trainerEmail || "",
           participantsCount: training.participantsCount || "",
         }));
+
+        // Auto-populate participants from registered participants if they exist
+        if (
+          training.registeredParticipants &&
+          training.registeredParticipants.length > 0
+        ) {
+          const participants = training.registeredParticipants
+            .filter((p) => p.email && p.name) // Only include participants with email and name
+            .map((p) => ({
+              fullName: p.name || "",
+              aadhaarNumber: p.aadhaarNumber || "",
+              email: p.email || "",
+              phone: p.phone || "",
+            }));
+          setAddedParticipants(participants);
+        }
       } catch (err) {
         setError(
           err.response?.data?.message ||
@@ -333,17 +349,21 @@ export default function AddTraining() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        role="partner"
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="main-content">
         <div className="top-nav">
-          <button 
+          <button
             className="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
           >
             <FiMenu size={24} />
           </button>
-          
+
           <h2 className="nav-title">
             {scheduledTrainingId
               ? "Submit Scheduled Training for Approval"

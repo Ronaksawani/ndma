@@ -23,6 +23,46 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
+const issueCertificatesForTraining = async (training) => {
+  const Participant = require("../models/Participant.js");
+  const participantDocs = await Participant.find({
+    "trainings.trainingId": training._id,
+  });
+
+  const issuedAt = new Date();
+
+  for (const participant of participantDocs) {
+    let changed = false;
+
+    participant.trainings = participant.trainings || [];
+    for (const trainingEntry of participant.trainings) {
+      if (
+        !trainingEntry.trainingId ||
+        trainingEntry.trainingId.toString() !== training._id.toString()
+      ) {
+        continue;
+      }
+
+      if (trainingEntry.status !== "cancelled") {
+        if (trainingEntry.status !== "completed") {
+          trainingEntry.status = "completed";
+          changed = true;
+        }
+
+        if (!trainingEntry.certificateIssued) {
+          trainingEntry.certificateIssued = true;
+          trainingEntry.certificateIssuedAt = issuedAt;
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) {
+      await participant.save();
+    }
+  }
+};
+
 // Get all trainings (with filters)
 router.get("/", optionalAuth, async (req, res) => {
   try {
@@ -89,7 +129,10 @@ router.get("/:id", async (req, res) => {
 
     // Map to include only the relevant training entry per participant
     const participants = participantDocs.map((p) => {
-      const t = p.trainings.find((tt) => tt.trainingId && tt.trainingId.toString() === training._id.toString());
+      const t = p.trainings.find(
+        (tt) =>
+          tt.trainingId && tt.trainingId.toString() === training._id.toString(),
+      );
       return {
         participantId: p._id,
         email: p.email,
@@ -769,13 +812,18 @@ router.put("/:id", auth, async (req, res) => {
 
         // Remove any existing training entries for this training across participants
         const Participant = require("../models/Participant.js");
-        await Participant.updateMany({}, { $pull: { trainings: { trainingId: training._id } } });
+        await Participant.updateMany(
+          {},
+          { $pull: { trainings: { trainingId: training._id } } },
+        );
 
         // Add updated participants into consolidated Participant documents
         for (const participant of participantsArray) {
           const filter = {};
-          if (participant.aadhaarNumber) filter.aadhaarNumber = participant.aadhaarNumber;
-          else if (participant.email) filter.email = participant.email.toLowerCase();
+          if (participant.aadhaarNumber)
+            filter.aadhaarNumber = participant.aadhaarNumber;
+          else if (participant.email)
+            filter.email = participant.email.toLowerCase();
 
           const trainingEntry = {
             trainingId: training._id,
@@ -801,7 +849,9 @@ router.put("/:id", auth, async (req, res) => {
               const newP = new Participant({
                 fullName: participant.fullName || "",
                 aadhaarNumber: participant.aadhaarNumber || undefined,
-                email: participant.email ? participant.email.toLowerCase() : undefined,
+                email: participant.email
+                  ? participant.email.toLowerCase()
+                  : undefined,
                 phone: participant.phone || undefined,
                 organization: participant.organization || organizationName,
                 trainings: [trainingEntry],
@@ -818,9 +868,14 @@ router.put("/:id", auth, async (req, res) => {
 
     // Fetch updated participants and return
     const Participant = require("../models/Participant.js");
-    const participantDocs = await Participant.find({ "trainings.trainingId": training._id }).lean();
+    const participantDocs = await Participant.find({
+      "trainings.trainingId": training._id,
+    }).lean();
     const updatedParticipants = participantDocs.map((p) => {
-      const t = p.trainings.find((tt) => tt.trainingId && tt.trainingId.toString() === training._id.toString());
+      const t = p.trainings.find(
+        (tt) =>
+          tt.trainingId && tt.trainingId.toString() === training._id.toString(),
+      );
       return {
         participantId: p._id,
         email: p.email,
@@ -870,6 +925,10 @@ router.patch("/:id/status", auth, async (req, res) => {
       return res.status(404).json({ message: "Training not found" });
     }
 
+    if (status === "approved") {
+      await issueCertificatesForTraining(training);
+    }
+
     res.json({
       message: `Training ${status} successfully`,
       training,
@@ -913,7 +972,9 @@ router.delete("/:id", auth, async (req, res) => {
 router.post("/:id/register", auth, async (req, res) => {
   try {
     if (req.user.role !== "participant") {
-      return res.status(403).json({ message: "Only participants can register" });
+      return res
+        .status(403)
+        .json({ message: "Only participants can register" });
     }
 
     const training = await TrainingEvent.findById(req.params.id);
@@ -928,10 +989,26 @@ router.post("/:id/register", auth, async (req, res) => {
     let participant = await Participant.findOne({ email });
 
     const already = participant?.trainings?.find(
-      (t) => t.trainingId && t.trainingId.toString() === req.params.id && t.status !== "cancelled",
+      (t) =>
+        t.trainingId &&
+        t.trainingId.toString() === req.params.id &&
+        t.status !== "cancelled",
     );
     if (already) {
-      return res.status(400).json({ message: "Already registered for this training" });
+      return res
+        .status(400)
+        .json({ message: "Already registered for this training" });
+    }
+
+    // Check if max participants limit has been reached
+    if (training.participantsCount && training.participantsCount > 0) {
+      const registeredCount = training.registeredParticipants?.length || 0;
+      if (registeredCount >= training.participantsCount) {
+        return res.status(400).json({
+          message:
+            "This training has reached its maximum participant limit. Registration is no longer available.",
+        });
+      }
     }
 
     const trainingEntry = {
@@ -964,6 +1041,8 @@ router.post("/:id/register", auth, async (req, res) => {
       participantId: participant._id,
       email,
       name: participant.fullName || req.user.fullName || "Participant",
+      phone: participant.phone || req.user.phone || "",
+      aadhaarNumber: participant.aadhaarNumber || req.user.aadhaarNumber || "",
       registeredAt: new Date(),
       status: "registered",
     });
@@ -996,9 +1075,10 @@ router.post("/:id/register", auth, async (req, res) => {
       },
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to register for training", error: error.message });
+    res.status(500).json({
+      message: "Failed to register for training",
+      error: error.message,
+    });
   }
 });
 
@@ -1008,24 +1088,30 @@ router.post("/:id/cancel-registration", auth, async (req, res) => {
     if (req.user.role !== "participant") {
       return res.status(403).json({ message: "Only participants can cancel" });
     }
-    const Participant = require('../models/Participant.js');
+    const Participant = require("../models/Participant.js");
 
     // Find participant and the matching training entry
     const email = req.user.email.toLowerCase();
     const participant = await Participant.findOne({
       email,
-      'trainings.trainingId': req.params.id,
-      'trainings.status': 'registered',
+      "trainings.trainingId": req.params.id,
+      "trainings.status": "registered",
     });
 
     if (!participant) {
-      return res.status(404).json({ message: 'Registration not found or already cancelled' });
+      return res
+        .status(404)
+        .json({ message: "Registration not found or already cancelled" });
     }
 
     // Update the nested training entry to cancelled
     await Participant.updateOne(
-      { email, 'trainings.trainingId': req.params.id, 'trainings.status': 'registered' },
-      { $set: { 'trainings.$.status': 'cancelled' } },
+      {
+        email,
+        "trainings.trainingId": req.params.id,
+        "trainings.status": "registered",
+      },
+      { $set: { "trainings.$.status": "cancelled" } },
     );
 
     // Remove from training's registered participants
@@ -1071,14 +1157,14 @@ router.get("/:id", optionalAuth, async (req, res) => {
     }
 
     let isRegistered = false;
-      if (req.user && req.user.role === "participant") {
-        const Participant = require("../models/Participant.js");
-        const reg = await Participant.findOne({
-          email: req.user.email.toLowerCase(),
-          "trainings.trainingId": req.params.id,
-          "trainings.status": "registered",
-        });
-        isRegistered = !!reg;
+    if (req.user && req.user.role === "participant") {
+      const Participant = require("../models/Participant.js");
+      const reg = await Participant.findOne({
+        email: req.user.email.toLowerCase(),
+        "trainings.trainingId": req.params.id,
+        "trainings.status": "registered",
+      });
+      isRegistered = !!reg;
     }
 
     res.json({

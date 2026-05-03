@@ -849,10 +849,14 @@ export default function PartnerDashboard() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        role="partner"
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="main-content">
         <div className="top-nav">
-          <button 
+          <button
             className="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
@@ -1140,7 +1144,11 @@ export default function PartnerDashboard() {
                                     }}
                                   >
                                     <strong>Participants:</strong>{" "}
-                                    {training.participantsCount}
+                                    {training.status === "upcoming" ||
+                                    training.status === "ongoing"
+                                      ? training.registeredParticipants
+                                          ?.length || 0
+                                      : training.participantsCount}
                                   </div>
                                 </div>
                               </Popup>
@@ -1553,7 +1561,12 @@ export default function PartnerDashboard() {
                           {training.location?.district},{" "}
                           {training.location?.state}
                         </td>
-                        <td>{training.participantsCount}</td>
+                        <td>
+                          {training.status === "upcoming" ||
+                          training.status === "ongoing"
+                            ? training.registeredParticipants?.length || 0
+                            : training.participantsCount}
+                        </td>
                         <td>
                           <span className={`badge badge-${training.status}`}>
                             {training.status}

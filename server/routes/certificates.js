@@ -20,23 +20,54 @@ router.get("/verify/:aadhaarNumber", async (req, res) => {
     const participant = await Participant.findOne({ aadhaarNumber }).lean();
 
     if (!participant) {
-      return res.status(404).json({ success: false, verified: false, message: "Certificate not found. Please check the Aadhaar number." });
+      return res.status(404).json({
+        success: false,
+        verified: false,
+        message: "Certificate not found. Please check the Aadhaar number.",
+      });
     }
 
     // Collect all trainings that have certificates
-    const trainingsWithCert = (participant.trainings || []).filter((t) => t.certificateIssued);
+    const trainingsWithCert = (participant.trainings || []).filter(
+      (t) => t.certificateIssued,
+    );
 
     // Enrich with training event details where possible
     const TrainingEvent = require("../models/TrainingEvent");
+    const looksLikeObjectId = (value) =>
+      typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
+
     const enriched = await Promise.all(
       trainingsWithCert.map(async (t) => {
         let trainingDetails = null;
-        if (t.trainingId) trainingDetails = await TrainingEvent.findById(t.trainingId).lean();
+        if (t.trainingId) {
+          trainingDetails = await TrainingEvent.findById(t.trainingId)
+            .populate("partnerId", "organizationName name")
+            .lean();
+        }
+
+        const organizationName =
+          trainingDetails?.partnerId?.organizationName ||
+          trainingDetails?.partnerId?.name ||
+          (looksLikeObjectId(t.organization) ? null : t.organization) ||
+          "N/A";
+
         return {
-          trainingTitle: t.trainingTitle || (trainingDetails ? trainingDetails.title : "N/A"),
-          trainingTheme: t.trainingTheme || (trainingDetails ? trainingDetails.theme : "N/A"),
-          trainingDates: t.trainingDates || (trainingDetails ? { start: trainingDetails.startDate, end: trainingDetails.endDate } : {}),
-          organization: t.organization || (trainingDetails ? trainingDetails.partnerId : "N/A"),
+          trainingTitle:
+            t.trainingTitle ||
+            (trainingDetails ? trainingDetails.title : "N/A"),
+          trainingTheme:
+            t.trainingTheme ||
+            (trainingDetails ? trainingDetails.theme : "N/A"),
+          trainingDates:
+            t.trainingDates ||
+            (trainingDetails
+              ? {
+                  start: trainingDetails.startDate,
+                  end: trainingDetails.endDate,
+                }
+              : {}),
+          organization: organizationName,
           certificateIssuedAt: t.certificateIssuedAt,
           certificateUrl: t.certificateUrl,
           trainingLocation: trainingDetails ? trainingDetails.location : {},

@@ -1,9 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { FiMenu } from "react-icons/fi";
+import jsPDF from "jspdf";
 import Sidebar from "../components/Sidebar";
 import { participantAPI } from "../utils/api";
 import styles from "../styles/Participant.module.css";
 import certStyles from "../styles/Certificate.module.css";
+
+const CERTIFICATE_TEMPLATE = "/images/certificate_templet.png";
+
+const loadImage = (src) =>
+  new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
 
 export default function ParticipantCertificates() {
   const [certificates, setCertificates] = useState([]);
@@ -31,9 +43,58 @@ export default function ParticipantCertificates() {
     }
   };
 
-  const downloadCertificate = (certificateUrl) => {
-    if (certificateUrl) {
-      window.open(certificateUrl, "_blank");
+  const generateCertificatePdf = async (cert) => {
+    const template = await loadImage(CERTIFICATE_TEMPLATE);
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: [270, 190] });
+
+    doc.addImage(template, "PNG", 0, 0, 270, 190);
+
+    const participantName = profile?.fullName || "Participant Name";
+    const certificateTitle = cert.certificateTitle || "CERTIFICATE OF PARTICIPATION";
+    const trainingTitle = cert.trainingTitle || "Training Program";
+    const issueDate = cert.certificateIssuedAt
+      ? new Date(cert.certificateIssuedAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })
+      : "-";
+
+    // Use a conservative set of overlays so we don't duplicate text
+    // that's already part of the template image. Only place the
+    // participant name, training title and issued date, with
+    // sizes and positions tuned for the existing template.
+    doc.setTextColor(28, 67, 130);
+
+    // Participant name: prominent, centered
+    doc.setFont("times", "bold");
+    doc.setFontSize(30);
+    doc.text(participantName, 135, 118.5, { align: "center" });
+
+    // Training title: slightly smaller and below the name
+    doc.setFont("times", "bold");
+    doc.setFontSize(14);
+    // wrap long titles across lines if necessary
+    const wrapWidth = 180; // approx mm width for 270x190 page
+    const trainingLines = doc.splitTextToSize(trainingTitle, wrapWidth);
+    doc.text(trainingLines, 135, 136.2, { align: "center" });
+
+    // Issued date
+    doc.setFont("times", "Bold");
+    doc.setFontSize(9);
+    doc.text(`${issueDate}`, 40.5, 170, { align: "center" });
+
+    const safeParticipantName = participantName.replace(/[^a-z0-9]+/gi, "_");
+    const safeTrainingTitle = trainingTitle.replace(/[^a-z0-9]+/gi, "_");
+    doc.save(`${safeParticipantName}_${safeTrainingTitle}_Certificate.pdf`);
+  };
+
+  const downloadCertificate = async (cert) => {
+    try {
+      await generateCertificatePdf(cert);
+    } catch (error) {
+      console.error("Failed to generate certificate PDF:", error);
+      alert("Failed to generate certificate PDF");
     }
   };
 
@@ -109,9 +170,9 @@ export default function ParticipantCertificates() {
                     </p>
                     <button
                       className={certStyles.viewBtn}
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        downloadCertificate(cert.certificateUrl);
+                        await downloadCertificate(cert);
                       }}
                     >
                       View Certificate
@@ -213,7 +274,7 @@ export default function ParticipantCertificates() {
                   <div className={certStyles.modalActions}>
                     <button
                       className={certStyles.downloadBtn}
-                      onClick={() => downloadCertificate(selectedCert.certificateUrl)}
+                      onClick={() => downloadCertificate(selectedCert)}
                     >
                       📥 Download PDF
                     </button>

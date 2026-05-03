@@ -8,16 +8,78 @@ const auth = require("../middleware/auth.js");
 
 const router = express.Router();
 
+async function syncParticipantCertificates(participant) {
+  const trainings = participant?.trainings || [];
+  const trainingIds = [
+    ...new Set(
+      trainings
+        .map((training) => training.trainingId)
+        .filter(Boolean)
+        .map((trainingId) => trainingId.toString()),
+    ),
+  ];
+
+  if (trainingIds.length === 0) {
+    return trainings;
+  }
+
+  const approvedTrainings = await TrainingEvent.find({
+    _id: { $in: trainingIds },
+    status: { $in: ["approved", "ongoing", "completed"] },
+  }).lean();
+
+  const approvedById = new Map(
+    approvedTrainings.map((training) => [training._id.toString(), training]),
+  );
+
+  let changed = false;
+  const updatedTrainings = trainings.map((training) => {
+    if (!training.trainingId) return training;
+
+    const liveTraining = approvedById.get(training.trainingId.toString());
+    if (!liveTraining || training.status === "cancelled") return training;
+
+    const shouldIssueCertificate = !training.certificateIssued;
+    if (!shouldIssueCertificate && training.status === "completed") {
+      return training;
+    }
+
+    changed = true;
+    return {
+      ...training,
+      status: "completed",
+      certificateIssued: true,
+      certificateIssuedAt:
+        training.certificateIssuedAt || liveTraining.approvedAt || new Date(),
+    };
+  });
+
+  if (changed) {
+    participant.trainings = updatedTrainings;
+    await participant.save();
+  }
+
+  return participant.trainings || [];
+}
+
 function normalizeParticipantPayload(body) {
   const fullName = String(body.fullName || "").trim();
-  const aadhaarNumber = String(body.aadhaarNumber || "").replace(/\D/g, "").slice(0, 12);
-  const email = String(body.email || "").trim().toLowerCase();
-  const phone = String(body.phone || "").replace(/\D/g, "").slice(0, 10);
+  const aadhaarNumber = String(body.aadhaarNumber || "")
+    .replace(/\D/g, "")
+    .slice(0, 12);
+  const email = String(body.email || "")
+    .trim()
+    .toLowerCase();
+  const phone = String(body.phone || "")
+    .replace(/\D/g, "")
+    .slice(0, 10);
   const dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : null;
   const gender = String(body.gender || "").trim();
   const state = String(body.state || "").trim();
   const nearbyDistricts = Array.isArray(body.nearbyDistricts)
-    ? body.nearbyDistricts.map((district) => String(district).trim()).filter(Boolean)
+    ? body.nearbyDistricts
+        .map((district) => String(district).trim())
+        .filter(Boolean)
     : [];
 
   return {
@@ -106,16 +168,30 @@ router.post("/participant-register", async (req, res) => {
       nearbyDistricts,
     } = normalizeParticipantPayload(req.body);
 
-    if (!fullName || !aadhaarNumber || !email || !phone || !dateOfBirth || !gender || !state) {
-      return res.status(400).json({ message: "All participant fields are required" });
+    if (
+      !fullName ||
+      !aadhaarNumber ||
+      !email ||
+      !phone ||
+      !dateOfBirth ||
+      !gender ||
+      !state
+    ) {
+      return res
+        .status(400)
+        .json({ message: "All participant fields are required" });
     }
 
     if (!/^\d{12}$/.test(aadhaarNumber)) {
-      return res.status(400).json({ message: "Aadhaar number must be exactly 12 digits" });
+      return res
+        .status(400)
+        .json({ message: "Aadhaar number must be exactly 12 digits" });
     }
 
     if (!/^\d{10}$/.test(phone)) {
-      return res.status(400).json({ message: "Phone number must be exactly 10 digits" });
+      return res
+        .status(400)
+        .json({ message: "Phone number must be exactly 10 digits" });
     }
 
     if (!(dateOfBirth instanceof Date) || Number.isNaN(dateOfBirth.getTime())) {
@@ -123,7 +199,9 @@ router.post("/participant-register", async (req, res) => {
     }
 
     if (nearbyDistricts.length !== 3) {
-      return res.status(400).json({ message: "Please select exactly 3 nearby districts" });
+      return res
+        .status(400)
+        .json({ message: "Please select exactly 3 nearby districts" });
     }
 
     const existingParticipant = await Participant.findOne({
@@ -131,7 +209,9 @@ router.post("/participant-register", async (req, res) => {
     });
 
     if (existingParticipant) {
-      return res.status(400).json({ message: "Participant already registered" });
+      return res
+        .status(400)
+        .json({ message: "Participant already registered" });
     }
 
     const participant = new Participant({
@@ -164,7 +244,10 @@ router.post("/participant-register", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Participant registration failed", error: error.message });
+    res.status(500).json({
+      message: "Participant registration failed",
+      error: error.message,
+    });
   }
 });
 
@@ -250,7 +333,9 @@ router.post("/participant-login", async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const certificatesCount = (participant.trainings || []).filter((t) => t.certificateIssued).length;
+    const certificatesCount = (participant.trainings || []).filter(
+      (t) => t.certificateIssued,
+    ).length;
 
     const token = jwt.sign(
       {
@@ -405,8 +490,11 @@ router.get("/participant/profile", auth, async (req, res) => {
       return res.status(403).json({ message: "Only participants can access" });
     }
 
-    const participant = await Participant.findOne({ email: req.user.email.toLowerCase() });
-    if (!participant) return res.status(404).json({ message: "Participant not found" });
+    const participant = await Participant.findOne({
+      email: req.user.email.toLowerCase(),
+    });
+    if (!participant)
+      return res.status(404).json({ message: "Participant not found" });
 
     res.json({
       id: participant._id,
@@ -420,12 +508,15 @@ router.get("/participant/profile", auth, async (req, res) => {
       nearbyDistricts: participant.nearbyDistricts,
       organization: participant.organization,
       participationsCount: (participant.trainings || []).length,
-      certificatesCount: (participant.trainings || []).filter((t) => t.certificateIssued).length,
+      certificatesCount: (participant.trainings || []).filter(
+        (t) => t.certificateIssued,
+      ).length,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch participant profile", error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch participant profile",
+      error: error.message,
+    });
   }
 });
 
@@ -436,17 +527,25 @@ router.get("/participant/records", auth, async (req, res) => {
       return res.status(403).json({ message: "Only participants can access" });
     }
 
-    const participant = await Participant.findOne({ email: req.user.email.toLowerCase() });
-    if (!participant) return res.status(404).json({ message: "Participant not found" });
+    const participant = await Participant.findOne({
+      email: req.user.email.toLowerCase(),
+    });
+    if (!participant)
+      return res.status(404).json({ message: "Participant not found" });
 
-    const records = (participant.trainings || []).slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const records = await syncParticipantCertificates(participant);
     const certificates = records.filter((r) => r.certificateIssued);
 
-    res.json({ records, certificates });
+    const sortedRecords = records
+      .slice()
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({ records: sortedRecords, certificates });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch participant records", error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch participant records",
+      error: error.message,
+    });
   }
 });
 
@@ -457,20 +556,26 @@ router.get("/participant/dashboard", auth, async (req, res) => {
       return res.status(403).json({ message: "Only participants can access" });
     }
 
+    const participant = await Participant.findOne({
+      email: req.user.email.toLowerCase(),
+    });
+    if (!participant)
+      return res.status(404).json({ message: "Participant not found" });
 
-    const participant = await Participant.findOne({ email: req.user.email.toLowerCase() });
-    if (!participant) return res.status(404).json({ message: "Participant not found" });
+    const syncedTrainings = await syncParticipantCertificates(participant);
 
     const completedTrainingIds = [
       ...new Set(
-        (participant.trainings || [])
+        syncedTrainings
           .filter((t) => t.certificateIssued && t.trainingId)
           .map((t) => t.trainingId.toString()),
       ),
     ];
 
     const myTrainingDetails = completedTrainingIds.length
-      ? await TrainingEvent.find({ _id: { $in: completedTrainingIds } }).sort({ startDate: -1 })
+      ? await TrainingEvent.find({ _id: { $in: completedTrainingIds } }).sort({
+          startDate: -1,
+        })
       : [];
 
     const nearbyDistricts = (participant.nearbyDistricts || [])
@@ -478,7 +583,7 @@ router.get("/participant/dashboard", auth, async (req, res) => {
       .filter(Boolean);
 
     const nearbyTrainingQuery = {
-      status: "approved",
+      status: { $in: ["approved", "upcoming", "ongoing"] },
       startDate: { $gte: new Date() },
     };
 
@@ -486,24 +591,30 @@ router.get("/participant/dashboard", auth, async (req, res) => {
       nearbyTrainingQuery["location.district"] = { $in: nearbyDistricts };
     }
 
-    const nearbyTrainings = await TrainingEvent.find(nearbyTrainingQuery).sort({ startDate: 1 });
+    const nearbyTrainings = await TrainingEvent.find(nearbyTrainingQuery).sort({
+      startDate: 1,
+    });
 
     res.json({
       stats: {
-        totalParticipations: (participant.trainings || []).length,
-        certificatesIssued: (participant.trainings || []).filter((r) => r.certificateIssued).length,
+        totalParticipations: syncedTrainings.length,
+        certificatesIssued: syncedTrainings.filter((r) => r.certificateIssued)
+          .length,
         upcomingTrainings: nearbyTrainings.length,
-        statesCovered: new Set(myTrainingDetails.map((t) => t.location?.state).filter(Boolean)).size,
+        statesCovered: new Set(
+          myTrainingDetails.map((t) => t.location?.state).filter(Boolean),
+        ).size,
       },
-      myRecords: participant.trainings || [],
+      myRecords: syncedTrainings,
       myTrainingDetails,
       nearbyTrainings,
       upcomingTrainings: nearbyTrainings,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to fetch participant dashboard", error: error.message });
+    res.status(500).json({
+      message: "Failed to fetch participant dashboard",
+      error: error.message,
+    });
   }
 });
 
@@ -514,14 +625,8 @@ router.put("/participant/profile", auth, async (req, res) => {
       return res.status(403).json({ message: "Only participants can access" });
     }
 
-    const {
-      fullName,
-      phone,
-      dateOfBirth,
-      gender,
-      state,
-      nearbyDistricts,
-    } = req.body;
+    const { fullName, phone, dateOfBirth, gender, state, nearbyDistricts } =
+      req.body;
 
     const records = await Participant.find({ email: req.user.email }).sort({
       createdAt: -1,

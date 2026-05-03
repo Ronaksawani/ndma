@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiEdit2, FiEye, FiSearch, FiMenu, FiSend, FiXCircle } from "react-icons/fi";
+import {
+  FiEdit2,
+  FiEye,
+  FiSearch,
+  FiMenu,
+  FiSend,
+  FiXCircle,
+} from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import { trainingAPI } from "../utils/api";
-import styles from "../styles/Dashboard.module.css";
 import themeOptions from "../data/themes.json";
 import statesDistricts from "../data/statesDistricts.json";
 
@@ -61,6 +67,16 @@ export default function MyTrainings() {
     if (typeof partner === "object")
       return partner.organizationName || partner.name || partner._id || "-";
     return training?.partnerName || partner || "-";
+  };
+
+  const getParticipantDisplayCount = (training) => {
+    const status = training?.status?.toLowerCase();
+
+    if (status === "upcoming" || status === "ongoing") {
+      return training?.registeredParticipants?.length || 0;
+    }
+
+    return Number(training?.participantsCount) || 0;
   };
 
   useEffect(() => {
@@ -243,10 +259,14 @@ export default function MyTrainings() {
 
   return (
     <div className="layout-container">
-      <Sidebar role="partner" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        role="partner"
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="main-content">
         <div className="top-nav">
-          <button 
+          <button
             className="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
@@ -669,7 +689,7 @@ export default function MyTrainings() {
                             {training.location?.state}
                           </td>
                           <td style={{ padding: "12px" }}>
-                            {training.participantsCount || 0}
+                            {getParticipantDisplayCount(training)}
                           </td>
                           {showOtherPartnersTrainings && (
                             <td style={{ padding: "12px" }}>
@@ -681,26 +701,27 @@ export default function MyTrainings() {
                           </td>
                           <td style={{ padding: "12px" }}>
                             <div style={{ display: "flex", gap: "8px" }}>
-                              {!showOtherPartnersTrainings && !(training.status === "approved") && (
-                                <button
-                                  onClick={() => handleEdit(training._id)}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    padding: "8px",
-                                    border: "1px solid #3b82f6",
-                                    color: "#3b82f6",
-                                    backgroundColor: "white",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    fontWeight: "500",
-                                  }}
-                                  title="Edit Training"
-                                >
-                                  <FiEdit2 size={16} />
-                                </button>
-                              )}
+                              {!showOtherPartnersTrainings &&
+                                !(training.status === "approved") && (
+                                  <button
+                                    onClick={() => handleEdit(training._id)}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      padding: "8px",
+                                      border: "1px solid #3b82f6",
+                                      color: "#3b82f6",
+                                      backgroundColor: "white",
+                                      borderRadius: "6px",
+                                      cursor: "pointer",
+                                      fontWeight: "500",
+                                    }}
+                                    title="Edit Training"
+                                  >
+                                    <FiEdit2 size={16} />
+                                  </button>
+                                )}
                               {!showOtherPartnersTrainings &&
                                 training.status?.toLowerCase() ===
                                   "upcoming" && (

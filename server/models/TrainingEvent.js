@@ -39,6 +39,8 @@ const TrainingEventSchema = new mongoose.Schema({
       participantId: mongoose.Schema.Types.ObjectId,
       email: String,
       name: String,
+      phone: String,
+      aadhaarNumber: String,
       registeredAt: Date,
       status: {
         type: String,
@@ -64,7 +66,15 @@ const TrainingEventSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["upcoming", "pending", "approved", "rejected", "ongoing", "completed", "cancelled"],
+    enum: [
+      "upcoming",
+      "pending",
+      "approved",
+      "rejected",
+      "ongoing",
+      "completed",
+      "cancelled",
+    ],
     default: "pending",
   },
   statusChangeReason: String,

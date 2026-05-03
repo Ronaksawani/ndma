@@ -67,15 +67,21 @@ export default function ParticipantTrainingDetails() {
 
   const handleRegister = async () => {
     if (!training) return;
-    
+
     try {
       setRegistering(true);
       await trainingAPI.register(training._id);
       setIsRegistered(true);
       alert("Successfully registered for this training!");
+      // Refresh training details to get updated participant count
+      const updatedTraining = await trainingAPI.getById(training._id);
+      setTraining(updatedTraining.data);
     } catch (error) {
       console.error("Failed to register", error);
-      alert("Failed to register for training");
+      const errorMessage =
+        error.response?.data?.message ||
+        "Registration failed. Please try again.";
+      alert(errorMessage);
     } finally {
       setRegistering(false);
     }
@@ -118,12 +124,23 @@ export default function ParticipantTrainingDetails() {
 
   const isUpcoming = new Date(training.startDate) > new Date();
 
+  // Check if training is at full capacity
+  const registeredCount = training.registeredParticipants?.length || 0;
+  const isFull =
+    training.participantsCount &&
+    training.participantsCount > 0 &&
+    registeredCount >= training.participantsCount;
+
   return (
     <div className={styles.layout}>
-      <Sidebar role="participant" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        role="participant"
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <main className={styles.main}>
         <header className={styles.topBar}>
-          <button 
+          <button
             className={styles.sidebarToggle}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle sidebar"
@@ -171,23 +188,29 @@ export default function ParticipantTrainingDetails() {
                     <div className={styles.infoItem}>
                       <span className={styles.infoLabel}>Start Date</span>
                       <span className={styles.infoValue}>
-                        {new Date(training.startDate).toLocaleDateString("en-IN", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {new Date(training.startDate).toLocaleDateString(
+                          "en-IN",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          },
+                        )}
                       </span>
                     </div>
                     <div className={styles.infoItem}>
                       <span className={styles.infoLabel}>End Date</span>
                       <span className={styles.infoValue}>
-                        {new Date(training.endDate).toLocaleDateString("en-IN", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
+                        {new Date(training.endDate).toLocaleDateString(
+                          "en-IN",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          },
+                        )}
                       </span>
                     </div>
                   </div>
@@ -199,7 +222,9 @@ export default function ParticipantTrainingDetails() {
                   <div className={styles.infoGrid}>
                     <div className={styles.infoItem}>
                       <span className={styles.infoLabel}>State</span>
-                      <span className={styles.infoValue}>{training.location?.state}</span>
+                      <span className={styles.infoValue}>
+                        {training.location?.state}
+                      </span>
                     </div>
                     <div className={styles.infoItem}>
                       <span className={styles.infoLabel}>District</span>
@@ -209,7 +234,9 @@ export default function ParticipantTrainingDetails() {
                     </div>
                     <div className={styles.infoItem}>
                       <span className={styles.infoLabel}>City</span>
-                      <span className={styles.infoValue}>{training.location?.city}</span>
+                      <span className={styles.infoValue}>
+                        {training.location?.city}
+                      </span>
                     </div>
                   </div>
                   <p className={styles.address}>{training.location?.address}</p>
@@ -257,28 +284,39 @@ export default function ParticipantTrainingDetails() {
               {/* Right Column */}
               <div className={styles.detailsRight}>
                 {/* Map */}
-                {training.location?.latitude && training.location?.longitude && (
-                  <div className={styles.detailCard}>
-                    <h3>🗺️ Map</h3>
-                    <div className={styles.mapContainer}>
-                      <MapContainer
-                        center={[training.location.latitude, training.location.longitude]}
-                        zoom={13}
-                        style={{ height: "300px", width: "100%", borderRadius: "8px" }}
-                      >
-                        <TileLayer
-                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <Marker
-                          position={[training.location.latitude, training.location.longitude]}
+                {training.location?.latitude &&
+                  training.location?.longitude && (
+                    <div className={styles.detailCard}>
+                      <h3>🗺️ Map</h3>
+                      <div className={styles.mapContainer}>
+                        <MapContainer
+                          center={[
+                            training.location.latitude,
+                            training.location.longitude,
+                          ]}
+                          zoom={13}
+                          style={{
+                            height: "300px",
+                            width: "100%",
+                            borderRadius: "8px",
+                          }}
                         >
-                          <Popup>{training.title}</Popup>
-                        </Marker>
-                      </MapContainer>
+                          <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <Marker
+                            position={[
+                              training.location.latitude,
+                              training.location.longitude,
+                            ]}
+                          >
+                            <Popup>{training.title}</Popup>
+                          </Marker>
+                        </MapContainer>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Your Information */}
                 {profile && isUpcoming && (
@@ -307,6 +345,11 @@ export default function ParticipantTrainingDetails() {
                         <div className={styles.registeredIcon}>✅</div>
                         <p>You are registered for this training</p>
                       </>
+                    ) : isFull ? (
+                      <>
+                        <div className={styles.completedIcon}>🔒</div>
+                        <p>This training has reached maximum capacity</p>
+                      </>
                     ) : isUpcoming ? (
                       <>
                         <div className={styles.unregisteredIcon}>📝</div>
@@ -322,7 +365,7 @@ export default function ParticipantTrainingDetails() {
                 </div>
 
                 {/* Action Buttons */}
-                {isUpcoming && !isRegistered && (
+                {isUpcoming && !isRegistered && !isFull && (
                   <button
                     className={styles.registerBtn}
                     onClick={handleRegister}
